@@ -70,9 +70,16 @@ traffic monitoring stations and displays them in an interactive dashboard.
 | `deldot-traffic-api` (ID: `94d3hvwu93`) | `https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/` | prod |
 
 **Endpoints:**
-- `GET /health` — Health check
+**Authentication:** API key required. Send it in the `x-api-key` header.
+Requests without a valid key receive `HTTP 403`.
+
+- `GET /health` — Health check (reports model version, whether enhanced cold-start is loaded)
 - `GET /forecast?station=STN_0067&direction=1&date=2026-09-15&hour=16` — Single forecast
 - `GET /forecast?station=STN_0067&direction=1&date=2026-09-15` — Full 24-hour profile
+- `GET /explain?station=STN_0067&direction=1&date=2026-09-15&hour=16` — Factor-by-factor
+  decomposition of the prediction (see `security_privacy_explainability.md`)
+
+**Rate limits:** 25 req/s, burst 50, 50,000 requests/month quota.
 
 ### DynamoDB
 
@@ -111,7 +118,7 @@ traffic monitoring stations and displays them in an interactive dashboard.
 | **Dashboard** | `https://us-east-1.quicksight.aws.amazon.com/sn/dashboards/deldot-traffic-dashboard-v3` |
 | **Forecast API** | `https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast?station=STN_0067&direction=1&date=2026-09-15&hour=16` |
 | **Health Check** | `https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/health` |
-| **Manual Refresh** | `https://7bg4ptclxz6hu6tcflfvt5qyze0vyjde.lambda-url.us-east-1.on.aws/` |
+| **Manual Refresh** | IAM-authenticated only — `aws lambda invoke --function-name deldot-batch-forecast` (no public URL) |
 
 ---
 
@@ -122,8 +129,11 @@ traffic monitoring stations and displays them in an interactive dashboard.
 - 6:00 AM ET: QuickSight SPICE auto-refreshes from S3
 
 ### Manual
-1. **Regenerate forecasts:** Visit `https://7bg4ptclxz6hu6tcflfvt5qyze0vyjde.lambda-url.us-east-1.on.aws/`  
-   Wait for JSON response (~13 seconds)
+1. **Regenerate forecasts** (requires IAM credentials):
+   ```bash
+   aws lambda invoke --region us-east-1 --function-name deldot-batch-forecast \
+     --cli-binary-format raw-in-base64-out --payload '{}' /tmp/out.json
+   ```
 2. **Refresh dashboard data:** In QuickSight → Datasets → `DelDOT Live Forecasts` → Refresh Now
 
 ---

@@ -1,24 +1,131 @@
-name: CI sanity check
+name: CI — validate deliverables
 
-
-# Trigger of the workflow, runs on push and PR
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-# Define tasks
 jobs:
-  sanity-check:
+  validate-deliverables:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Pull code from your repository into the runner
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # Step 2: Print repository structure
-      - name: Show repository structure
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
         run: |
-          echo "Repository contents:"
-          ls -R .
+          python -m pip install --upgrade pip
+          pip install "pandas==2.2.3" "numpy==2.1.3" "pyarrow==18.1.0"
+
+      - name: Confirm required files exist
+        run: |
+          set -e
+          for f in \
+            submission_template.csv \
+            scenario_template.csv \
+            output/submission.csv \
+            scenario_template_filled.csv \
+            validate_submission.py
+          do
+            if [ ! -f "$f" ]; then
+              echo "MISSING required file: $f"
+              exit 1
+            fi
+            echo "found: $f"
+          done
+
+      - name: Run official submission validator
+        run: python validate_submission.py output/submission.csv
+
+      - name: Enforce forecast file constraints
+        run: |
+          python - <<'PY'
+          import sys
+          import numpy as np
+          import pandas as pd
+
+          sub = pd.read_csv("output/submission.csv")
+          tmpl = pd.read_csv("submission_template.csv")
+          value_cols = ["forecast_volume", "lower_90", "upper_90", "reliability_score"]
+
+          checks = {
+              "row count matches template": len(sub) == len(tmpl),
+              "no duplicate target_ids": sub["target_id"].duplicated().sum() == 0,
+              "target_ids match template": set(sub["target_id"]) == set(tmpl["target_id"]),
+              "no missing values": sub[value_cols].notna().all().all(),
+              "all values finite": bool(np.isfinite(sub[value_cols].to_numpy()).all()),
+              "forecast_volume >= 0": bool((sub["forecast_volume"] >= 0).all()),
+              "lower_90 >= 0": bool((sub["lower_90"] >= 0).all()),
+              "lower <= forecast <= upper": bool(
+                  ((sub["lower_90"] <= sub["forecast_volume"])
+                   & (sub["forecast_volume"] <= sub["upper_90"])).all()
+              ),
+              "0 <= reliability <= 1": bool(
+                  ((sub["reliability_score"] >= 0)
+                   & (sub["reliability_score"] <= 1)).all()
+              ),
+          }
+
+          for name, ok in checks.items():
+              print(f"[{'PASS' if ok else 'FAIL'}] {name}")
+
+          if not all(checks.values()):
+              sys.exit("Forecast file constraint checks FAILED")
+          print(f"\nAll {len(checks)} forecast constraints passed ({len(sub):,} rows).")
+          PY
+
+      - name: Enforce scenario file constraints
+        run: |
+          python - <<'PY'
+          import sys
+          import pandas as pd
+
+          sc = pd.read_csv("scenario_template_filled.csv")
+          tmpl = pd.read_csv("scenario_template.csv")
+          required = [
+              "station_key", "estimated_volume_change_pct", "lower_bound_pct",
+              "upper_bound_pct", "reliability_score", "assumptions",
+          ]
+
+          checks = {
+              "columns match template": list(sc.columns) == list(tmpl.columns),
+              "five scenarios present": len(sc) == 5,
+              "required fields populated": sc[required].notna().all().all(),
+              "bounds ordered": bool(
+                  ((sc["lower_bound_pct"] <= sc["estimated_volume_change_pct"])
+                   & (sc["estimated_volume_change_pct"] <= sc["upper_bound_pct"])).all()
+              ),
+              "0 <= reliability <= 1": bool(
+                  ((sc["reliability_score"] >= 0)
+                   & (sc["reliability_score"] <= 1)).all()
+              ),
+          }
+
+          for name, ok in checks.items():
+              print(f"[{'PASS' if ok else 'FAIL'}] {name}")
+
+          if not all(checks.values()):
+              sys.exit("Scenario file constraint checks FAILED")
+          print(f"\nAll {len(checks)} scenario constraints passed.")
+          PY
+
+      - name: Check Python sources compile
+        run: python -m compileall -q src
+
+      - name: Guard against committed secrets
+        run: |
+          set -e
+          # Fail if an AWS access key id or a private key block is committed.
+          if grep -rInE 'AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY' \
+               --include='*.py' --include='*.md' --include='*.yml' \
+               --include='*.yaml' --include='*.json' --include='*.csv' . ; then
+            echo "Potential secret detected in tracked files"
+            exit 1
+          fi
+          echo "No committed AWS keys or private keys detected."

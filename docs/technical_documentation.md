@@ -132,7 +132,7 @@ The model is deployed as a live system in AWS account `062905933333` (us-east-1)
 
 **Daily pipeline:** EventBridge (5am) → Batch Lambda (13s, generates 257K predictions) → S3 → QuickSight SPICE refresh (6am) → Dashboard shows next 30 days
 
-**Manual refresh:** Hit `https://7bg4ptclxz6hu6tcflfvt5qyze0vyjde.lambda-url.us-east-1.on.aws/` then refresh SPICE in QuickSight.
+**Manual refresh:** `aws lambda invoke --function-name deldot-batch-forecast` (IAM-authenticated), then refresh SPICE in QuickSight. There is no public refresh URL.
 
 **Cost:** ~$25/month (dominated by QuickSight Enterprise license).
 
@@ -273,6 +273,16 @@ forecasts across almost all conditions.
 
 ---
 
+## Security, Privacy & Explainability
+
+See `docs/security_privacy_explainability.md` for the full posture, including:
+- privacy properties (aggregate hourly counts only; no PII; anonymous station IDs)
+- security controls and two issues found and fixed during review
+  (unauthenticated public Lambda URL removed; API key auth added)
+- the `/explain` endpoint and worked factor decompositions
+
+---
+
 ## Scenario Analysis
 
 Five operational scenarios were defined and analyzed (worth 20% of evaluation).
@@ -352,19 +362,23 @@ python3 validate_submission.py model/output/submission.csv
 ### Test Live API
 ```bash
 # Health check
-curl https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/health
+curl -H "x-api-key: $KEY" https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/health
 
 # Single forecast
-curl "https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast?station=STN_0067&direction=1&date=2026-09-15&hour=16"
+curl -H "x-api-key: $KEY" "https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast?station=STN_0067&direction=1&date=2026-09-15&hour=16"
 
 # Full day profile
-curl "https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast?station=STN_0067&direction=1&date=2026-09-15"
+curl -H "x-api-key: $KEY" "https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast?station=STN_0067&direction=1&date=2026-09-15"
+
+# Explain a single prediction (factor decomposition)
+curl -H "x-api-key: $KEY" "https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/explain?station=STN_0067&direction=1&date=2026-09-15&hour=16"
 ```
 
 ### Trigger Manual Forecast Refresh
 ```bash
 # Regenerate 30-day forecasts (takes ~13 seconds)
-curl https://7bg4ptclxz6hu6tcflfvt5qyze0vyjde.lambda-url.us-east-1.on.aws/
+aws lambda invoke --region us-east-1 --function-name deldot-batch-forecast \
+  --cli-binary-format raw-in-base64-out --payload '{}' /tmp/out.json
 
 # Then refresh QuickSight SPICE:
 aws quicksight create-ingestion --region us-east-1 \

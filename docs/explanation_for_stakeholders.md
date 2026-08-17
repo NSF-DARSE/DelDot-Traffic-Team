@@ -132,8 +132,8 @@ This isn't a plan — it's deployed and live:
 4. **On-demand API** available for any app to query a specific station/date/hour
 
 **Dashboard URL:** Ask your admin for QuickSight access  
-**API endpoint:** `https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast`  
-**Manual refresh:** `https://7bg4ptclxz6hu6tcflfvt5qyze0vyjde.lambda-url.us-east-1.on.aws/`
+**API endpoint:** `https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod/forecast` (API key required)  
+**Manual refresh:** requires AWS credentials (no public endpoint, by design)
 
 **Current cost:** ~$25/month (mostly QuickSight license). Scales to 500+ stations
 with no architecture changes.
