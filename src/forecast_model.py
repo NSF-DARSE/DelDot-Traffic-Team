@@ -12,7 +12,7 @@ Architecture:
                × station_adj × trend_factor
 
 Author: Traffic Pattern Analysis Model
-Date: 2025-08-17
+Date: 2026-08-17
 """
 
 import pandas as pd
