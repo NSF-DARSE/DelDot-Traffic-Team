@@ -1,0 +1,128 @@
+station_key,through_lanes,speed_limit,functional_class,aadt_band,lane_width,roadway_width_band,surface_type
+STN_0001,2.0,55.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0002,2.0,35.0,,10k-25k,12.0,36-47,Asphalt
+STN_0003,2.0,40.0,Minor Arterial,10k-25k,12.0,36-47,Composite
+STN_0004,2.0,45.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0005,3.0,50.0,Other Principal Arterials,25k-50k,12.0,48-59,Composite
+STN_0006,2.0,55.0,Other Expressways & Freeway,25k-50k,12.0,36-47,Composite
+STN_0007,3.0,45.0,Other Principal Arterials,50k-100k,12.0,36-47,Composite
+STN_0008,2.0,55.0,Other Expressways & Freeway,25k-50k,12.0,36-47,Composite
+STN_0009,2.0,50.0,,<5k,8.0,<24,Asphalt
+STN_0010,2.0,55.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0011,3.0,45.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0012,4.0,65.0,Interstate,100k+,12.0,60+,Composite
+STN_0013,2.0,50.0,Other Principal Arterials,10k-25k,12.0,60+,Composite
+STN_0014,2.0,50.0,Other Principal Arterials,10k-25k,11.0,36-47,Composite
+STN_0015,2.0,35.0,Other Principal Arterials,10k-25k,11.0,<24,
+STN_0016,2.0,30.0,,5k-10k,11.0,24-35,Asphalt
+STN_0017,2.0,60.0,Other Expressways & Freeway,25k-50k,12.0,48-59,Asphalt
+STN_0018,2.0,45.0,Other Principal Arterials,25k-50k,12.0,24-35,
+STN_0019,2.0,45.0,Minor Arterial,10k-25k,14.0,36-47,Composite
+STN_0020,2.0,35.0,,10k-25k,11.0,36-47,Composite
+STN_0021,1.0,40.0,Major Collector,10k-25k,12.0,<24,Asphalt
+STN_0022,2.0,50.0,,5k-10k,11.0,36-47,Composite
+STN_0023,3.0,35.0,Minor Arterial,25k-50k,12.0,48-59,Composite
+STN_0024,2.0,35.0,Other Principal Arterials,25k-50k,12.0,24-35,Composite
+STN_0025,1.0,40.0,Major Collector,10k-25k,12.0,24-35,Composite
+STN_0026,2.0,50.0,Other Principal Arterials,25k-50k,12.0,36-47,Concrete
+STN_0027,2.0,50.0,Minor Collector,<5k,10.0,24-35,Composite
+STN_0028,2.0,65.0,Interstate,50k-100k,12.0,36-47,Concrete
+STN_0029,2.0,35.0,Major Collector,<5k,12.0,36-47,Asphalt
+STN_0030,4.0,50.0,Other Principal Arterials,10k-25k,12.0,60+,Composite
+STN_0031,2.0,55.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0032,2.0,50.0,,10k-25k,12.0,36-47,
+STN_0033,2.0,55.0,,10k-25k,12.0,36-47,Composite
+STN_0034,2.0,40.0,,5k-10k,10.0,24-35,Composite
+STN_0035,2.0,25.0,Minor Collector,<5k,11.0,24-35,Asphalt
+STN_0036,2.0,35.0,,10k-25k,12.0,24-35,Asphalt
+STN_0037,2.0,35.0,,10k-25k,12.0,24-35,Asphalt
+STN_0038,3.0,55.0,Interstate,50k-100k,12.0,48-59,
+STN_0039,2.0,65.0,,10k-25k,12.0,36-47,Concrete
+STN_0040,3.0,40.0,Minor Arterial,25k-50k,11.0,24-35,Composite
+STN_0041,2.0,35.0,Minor Arterial,10k-25k,12.0,48-59,Composite
+STN_0042,4.0,65.0,Interstate,100k+,12.0,60+,Composite
+STN_0043,2.0,55.0,Minor Arterial,25k-50k,12.0,36-47,Composite
+STN_0044,2.0,65.0,,5k-10k,12.0,36-47,Concrete
+STN_0045,2.0,20.0,Local,<5k,17.0,36-47,Asphalt
+STN_0046,2.0,25.0,,10k-25k,12.0,36-47,Composite
+STN_0047,2.0,30.0,Minor Collector,<5k,11.0,24-35,Composite
+STN_0048,2.0,25.0,,<5k,11.0,24-35,Asphalt
+STN_0049,2.0,35.0,Minor Arterial,10k-25k,12.0,36-47,Composite
+STN_0050,2.0,50.0,,25k-50k,12.0,24-35,Composite
+STN_0051,2.0,50.0,,5k-10k,11.0,36-47,Composite
+STN_0052,2.0,30.0,Major Collector,5k-10k,13.0,48-59,Asphalt
+STN_0053,3.0,55.0,Interstate,50k-100k,12.0,48-59,Composite
+STN_0054,2.0,55.0,,25k-50k,12.0,36-47,Composite
+STN_0055,4.0,50.0,Interstate,100k+,12.0,60+,Composite
+STN_0056,2.0,50.0,,10k-25k,12.0,24-35,Composite
+STN_0057,3.0,65.0,Interstate,50k-100k,12.0,48-59,Concrete
+STN_0058,1.0,45.0,Other Principal Arterials,10k-25k,12.0,24-35,Composite
+STN_0059,3.0,35.0,Other Principal Arterials,10k-25k,12.0,48-59,Composite
+STN_0060,3.0,65.0,Interstate,50k-100k,12.0,60+,Concrete
+STN_0061,2.0,35.0,Minor Arterial,10k-25k,12.0,24-35,Composite
+STN_0062,2.0,55.0,Interstate,50k-100k,12.0,36-47,Asphalt
+STN_0063,3.0,35.0,Minor Collector,<5k,12.0,36-47,Asphalt
+STN_0064,3.0,65.0,Interstate,50k-100k,12.0,48-59,Concrete
+STN_0065,2.0,55.0,Interstate,50k-100k,12.0,36-47,Composite
+STN_0066,2.0,55.0,Interstate,50k-100k,13.0,36-47,
+STN_0067,2.0,55.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0068,2.0,45.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0069,2.0,50.0,Minor Arterial,<5k,12.0,36-47,Composite
+STN_0070,2.0,40.0,Other Principal Arterials,25k-50k,12.0,48-59,Composite
+STN_0071,2.0,55.0,Interstate,50k-100k,12.0,36-47,Composite
+STN_0072,3.0,65.0,Interstate,50k-100k,12.0,48-59,Concrete
+STN_0073,4.0,55.0,Interstate,100k+,12.0,60+,Asphalt
+STN_0074,4.0,50.0,Interstate,50k-100k,12.0,48-59,
+STN_0075,2.0,25.0,Local,<5k,18.0,48-59,Asphalt
+STN_0076,4.0,45.0,Other Principal Arterials,10k-25k,11.0,60+,Composite
+STN_0077,2.0,35.0,Other Principal Arterials,10k-25k,11.0,36-47,Composite
+STN_0078,2.0,65.0,,10k-25k,12.0,36-47,Concrete
+STN_0079,2.0,40.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0080,2.0,25.0,,<5k,11.0,24-35,
+STN_0081,2.0,50.0,,<5k,10.0,36-47,Composite
+STN_0082,4.0,35.0,Minor Arterial,10k-25k,12.0,48-59,Composite
+STN_0083,2.0,65.0,,50k-100k,12.0,36-47,Asphalt
+STN_0084,2.0,55.0,Other Expressways & Freeway,25k-50k,12.0,36-47,Asphalt
+STN_0085,2.0,40.0,,<5k,9.0,24-35,Surface Treated
+STN_0086,2.0,45.0,Other Principal Arterials,25k-50k,12.0,24-35,Composite
+STN_0087,2.0,50.0,,<5k,11.0,24-35,Asphalt
+STN_0088,1.0,35.0,Other Principal Arterials,10k-25k,12.0,24-35,Composite
+STN_0089,3.0,45.0,Other Principal Arterials,25k-50k,12.0,60+,Composite
+STN_0090,2.0,50.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0091,2.0,50.0,Major Collector,<5k,12.0,36-47,Asphalt
+STN_0092,2.0,65.0,,50k-100k,12.0,36-47,Concrete
+STN_0093,4.0,65.0,Interstate,100k+,12.0,60+,Composite
+STN_0094,2.0,35.0,Minor Arterial,10k-25k,12.0,36-47,Composite
+STN_0095,2.0,35.0,,10k-25k,12.0,36-47,Asphalt
+STN_0096,2.0,35.0,Major Collector,<5k,10.0,36-47,Asphalt
+STN_0097,2.0,65.0,,50k-100k,12.0,36-47,Concrete
+STN_0098,2.0,55.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0099,2.0,55.0,Other Expressways & Freeway,25k-50k,12.0,36-47,Composite
+STN_0100,2.0,35.0,Minor Arterial,10k-25k,12.0,24-35,Composite
+STN_0101,2.0,50.0,,<5k,10.0,24-35,Asphalt
+STN_0102,2.0,25.0,,<5k,11.0,24-35,Asphalt
+STN_0103,4.0,45.0,Other Principal Arterials,10k-25k,11.0,60+,Composite
+STN_0104,4.0,30.0,Minor Arterial,10k-25k,12.0,48-59,Composite
+STN_0105,2.0,50.0,Major Collector,5k-10k,12.0,36-47,Composite
+STN_0106,2.0,50.0,Major Collector,<5k,12.0,36-47,Asphalt
+STN_0107,2.0,65.0,,10k-25k,12.0,36-47,Concrete
+STN_0108,5.0,65.0,Interstate,100k+,12.0,60+,Composite
+STN_0109,2.0,35.0,,<5k,12.0,24-35,Asphalt
+STN_0110,2.0,50.0,Other Principal Arterials,10k-25k,11.0,24-35,Composite
+STN_0111,2.0,55.0,Interstate,50k-100k,12.0,36-47,Asphalt
+STN_0112,2.0,50.0,,<5k,9.0,24-35,Asphalt
+STN_0113,2.0,55.0,,25k-50k,12.0,36-47,Composite
+STN_0114,3.0,65.0,Interstate,50k-100k,11.0,48-59,
+STN_0115,2.0,30.0,Local,<5k,12.0,36-47,Asphalt
+STN_0116,3.0,65.0,,100k+,12.0,48-59,Concrete
+STN_0117,5.0,65.0,Interstate,50k-100k,12.0,60+,Composite
+STN_0118,3.0,55.0,Interstate,50k-100k,12.0,60+,Composite
+STN_0119,2.0,50.0,Other Principal Arterials,10k-25k,12.0,36-47,Composite
+STN_0120,2.0,35.0,Local,<5k,6.0,<24,Asphalt
+STN_0121,2.0,55.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0122,3.0,40.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0123,2.0,55.0,Other Expressways & Freeway,25k-50k,12.0,36-47,Composite
+STN_0124,2.0,45.0,Other Principal Arterials,10k-25k,12.0,24-35,Asphalt
+STN_0125,2.0,50.0,Other Principal Arterials,25k-50k,12.0,36-47,Composite
+STN_0126,2.0,50.0,,10k-25k,12.0,36-47,Composite
+STN_0127,3.0,50.0,Interstate,100k+,13.0,48-59,Composite

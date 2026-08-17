@@ -1,12 +1,10 @@
-# Case Study: <Project Title>
+# Case Study: Traffic Pattern Analysis
 
 ## Overview
-Brief description of the problem.
+Analyze the supplied network traffic data and develop a method for forecasting
+future hourly traffic volume across anonymous monitoring locations.
 
-## Repository Structure
-- `package-name/` – source code
-- `docs/` – optional documentation (Sphinx scaffold)
-- `data/` – input/output data (if applicable)
+Evaluation also considers limited-history locations, difficult operating
+periods, incomplete observations, uncertainty, and supplied scenario questions.
 
-## Documentation
-This repository includes an optional Sphinx documentation scaffold.
+## Expected Solution Guidelines

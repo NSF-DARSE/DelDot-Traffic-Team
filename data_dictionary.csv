@@ -1,0 +1,21 @@
+field,description
+station_key,Opaque station identifier used consistently across participant files.
+timestamp,Hourly observation timestamp.
+direction_code,Travel direction code.
+direction,Readable travel direction.
+volume,Aggregated hourly traffic volume.
+hour,Hour of day (0-23).
+day_of_week,Monday=0 through Sunday=6.
+month,Calendar month (1-12).
+is_weekend,True for Saturday or Sunday.
+through_lanes,Number of through lanes.
+speed_limit,Posted speed limit.
+functional_class,Roadway functional class where available.
+aadt_band,Coarse annual average daily traffic band.
+lane_width,Lane width where available.
+roadway_width_band,Coarse roadway width band.
+surface_type,Roadway surface type where available.
+from_station_key,Origin node in the abstract station graph.
+to_station_key,Destination node in the abstract station graph.
+edge_type,Abstract relationship: same_corridor or proximity.
+distance_band,Coarse distance category; exact coordinates are not supplied.
