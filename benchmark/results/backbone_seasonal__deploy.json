@@ -1,0 +1,45 @@
+{
+ "model": "backbone_seasonal",
+ "arm": "deploy",
+ "seed": 0,
+ "created": "2026-08-18 13:49",
+ "code_sha": "bf8496c",
+ "splits_sha": "fd88b0f93a9d",
+ "source": "benchmark/models/backbone.py",
+ "folds": [
+  {
+   "deploy": {
+    "WAPE_%": 10.78,
+    "GEH<5_%": 83.3,
+    "GEH<10_%": 95.26,
+    "within20_%": 73.63,
+    "MAE": 92.62,
+    "RMSE": 195.85,
+    "sMAPE": 18.3,
+    "R2": 0.9626,
+    "cov90": 0.8706,
+    "width": 377.9,
+    "winkler": 678.7,
+    "n": 188880,
+    "fit_predict_s": 14.5
+   }
+  }
+ ],
+ "summary": {
+  "deploy": {
+   "WAPE_%": 10.78,
+   "GEH<5_%": 83.3,
+   "GEH<10_%": 95.26,
+   "within20_%": 73.63,
+   "MAE": 92.62,
+   "RMSE": 195.85,
+   "sMAPE": 18.3,
+   "R2": 0.9626,
+   "cov90": 0.8706,
+   "width": 377.9,
+   "winkler": 678.7,
+   "n": 188880,
+   "fit_predict_s": 14.5
+  }
+ }
+}

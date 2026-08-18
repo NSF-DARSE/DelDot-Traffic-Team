@@ -1,0 +1,45 @@
+{
+ "model": "team_v1_reimpl",
+ "arm": "deploy",
+ "seed": 0,
+ "created": "2026-08-18 13:55",
+ "code_sha": "bf8496c",
+ "splits_sha": "fd88b0f93a9d",
+ "source": "benchmark/models/team_v1.py",
+ "folds": [
+  {
+   "deploy": {
+    "WAPE_%": 15.09,
+    "GEH<5_%": 71.5,
+    "GEH<10_%": 90.77,
+    "within20_%": 62.73,
+    "MAE": 129.67,
+    "RMSE": 253.94,
+    "sMAPE": 23.15,
+    "R2": 0.9372,
+    "cov90": 0.8675,
+    "width": 506.9,
+    "winkler": 865.9,
+    "n": 188880,
+    "fit_predict_s": 7.5
+   }
+  }
+ ],
+ "summary": {
+  "deploy": {
+   "WAPE_%": 15.09,
+   "GEH<5_%": 71.5,
+   "GEH<10_%": 90.77,
+   "within20_%": 62.73,
+   "MAE": 129.67,
+   "RMSE": 253.94,
+   "sMAPE": 23.15,
+   "R2": 0.9372,
+   "cov90": 0.8675,
+   "width": 506.9,
+   "winkler": 865.9,
+   "n": 188880,
+   "fit_predict_s": 7.5
+  }
+ }
+}

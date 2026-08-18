@@ -1,0 +1,194 @@
+[
+  {
+    "cfg": {
+      "head": 384,
+      "hidden": 192,
+      "node_dropout": 0.2
+    },
+    "epochs": 20,
+    "gnn": [
+      83.39,
+      91.2
+    ],
+    "blend": [
+      83.51,
+      90.3
+    ]
+  },
+  {
+    "cfg": {
+      "head": 384,
+      "hidden": 192,
+      "node_dropout": 0.4
+    },
+    "epochs": 17,
+    "gnn": [
+      83.44,
+      90.9
+    ],
+    "blend": [
+      83.46,
+      90.7
+    ]
+  },
+  {
+    "cfg": {
+      "head": 384,
+      "hidden": 384,
+      "node_dropout": 0.2
+    },
+    "epochs": 22,
+    "gnn": [
+      83.17,
+      92.9
+    ],
+    "blend": [
+      83.42,
+      90.9
+    ]
+  },
+  {
+    "cfg": {
+      "head": 384,
+      "hidden": 384,
+      "node_dropout": 0.4
+    },
+    "epochs": 17,
+    "gnn": [
+      83.39,
+      91.4
+    ],
+    "blend": [
+      83.39,
+      90.8
+    ]
+  },
+  {
+    "cfg": {
+      "head": 384,
+      "hidden": 768,
+      "node_dropout": 0.2
+    },
+    "epochs": 21,
+    "gnn": [
+      83.41,
+      90.6
+    ],
+    "blend": [
+      83.48,
+      90.3
+    ]
+  },
+  {
+    "cfg": {
+      "head": 384,
+      "hidden": 768,
+      "node_dropout": 0.4
+    },
+    "epochs": 17,
+    "gnn": [
+      83.26,
+      91.8
+    ],
+    "blend": [
+      83.27,
+      91.3
+    ]
+  },
+  {
+    "cfg": {
+      "head": 768,
+      "hidden": 192,
+      "node_dropout": 0.2
+    },
+    "epochs": 20,
+    "gnn": [
+      82.87,
+      92.8
+    ],
+    "blend": [
+      83.34,
+      90.9
+    ]
+  },
+  {
+    "cfg": {
+      "head": 768,
+      "hidden": 192,
+      "node_dropout": 0.4
+    },
+    "epochs": 21,
+    "gnn": [
+      82.94,
+      92.1
+    ],
+    "blend": [
+      83.32,
+      90.6
+    ]
+  },
+  {
+    "cfg": {
+      "head": 768,
+      "hidden": 384,
+      "node_dropout": 0.2
+    },
+    "epochs": 13,
+    "gnn": [
+      82.59,
+      94.9
+    ],
+    "blend": [
+      83.04,
+      92.5
+    ]
+  },
+  {
+    "cfg": {
+      "head": 768,
+      "hidden": 384,
+      "node_dropout": 0.4
+    },
+    "epochs": 15,
+    "gnn": [
+      83.26,
+      92.6
+    ],
+    "blend": [
+      83.35,
+      91.4
+    ]
+  },
+  {
+    "cfg": {
+      "head": 768,
+      "hidden": 768,
+      "node_dropout": 0.2
+    },
+    "epochs": 32,
+    "gnn": [
+      83.28,
+      91.9
+    ],
+    "blend": [
+      83.45,
+      90.4
+    ]
+  },
+  {
+    "cfg": {
+      "head": 768,
+      "hidden": 768,
+      "node_dropout": 0.4
+    },
+    "epochs": 45,
+    "gnn": [
+      83.27,
+      91.3
+    ],
+    "blend": [
+      83.39,
+      90.6
+    ]
+  }
+]
