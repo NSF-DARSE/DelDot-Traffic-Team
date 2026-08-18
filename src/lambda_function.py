@@ -280,8 +280,8 @@ def lambda_handler(event, context):
                 'service': 'deldot-traffic-forecast',
                 'model_version': model_version(model),
                 'enhanced_cold_start': 'cold_baselines_enhanced' in model,
-                'endpoints': ['/health', '/forecast', '/explain',
-                              '/best-hours', '/best-window', '/ask'],
+                'endpoints': ['/health', '/forecast', '/explain', '/best-hours',
+                              '/best-window', '/simulate-closure', '/ask'],
             })
 
         # ---- deterministic planning endpoints ----
@@ -304,6 +304,16 @@ def lambda_handler(event, context):
                 'duration_hours': params.get('duration_hours', 24),
                 'align': params.get('align', 'day'),
                 'top': params.get('top', 3),
+            })
+
+        if path == '/simulate-closure':
+            return handle_simulate_closure({
+                'station': params.get('station'),
+                'direction': params.get('direction', '1'),
+                'start': params.get('start'),
+                'duration_hours': params.get('duration_hours', 24),
+                'lanes_closed': params.get('lanes_closed'),
+                'diversion_rate': params.get('diversion_rate', 0.70),
             })
 
         # ---- conversational endpoint ----
@@ -435,6 +445,35 @@ def handle_best_window(params):
     return response(200, result)
 
 
+def handle_simulate_closure(params):
+    from closure_sim import simulate_closure
+    model = load_model()
+    station = params.get('station')
+    if not station:
+        return response(400, {'error': 'Missing required parameter: station'})
+    if not params.get('start'):
+        return response(400, {'error': 'Missing required parameter: start (YYYY-MM-DD)'})
+    if 'capacity_per_lane' not in model:
+        return response(503, {'error': 'deployed model artifact predates the closure '
+                                       'simulator; redeploy with build_artifact.py 2.3+'})
+    try:
+        result = simulate_closure(
+            _volume_only, station, str(params.get('direction', '1')),
+            params['start'],
+            duration_hours=int(params.get('duration_hours', 24)),
+            capacity_per_lane=model['capacity_per_lane'],
+            station_lanes=model['station_lanes'],
+            neighbor_weights=model['neighbor_weights'],
+            lanes_closed=(int(params['lanes_closed'])
+                          if params.get('lanes_closed') is not None else None),
+            diversion_rate=float(params.get('diversion_rate', 0.70)),
+            known_stations=known_station_keys(model))
+    except ValueError as e:
+        return response(400, {'error': str(e)})
+    result['model_version'] = model_version(model)
+    return response(200, result)
+
+
 # ======================================================================
 # /ask — natural language over the deterministic tools
 # ======================================================================
@@ -507,6 +546,21 @@ def handle_ask(params, model):
                 duration_hours=parsed.get('duration_hours') or 24,
                 align=parsed.get('align') or 'day',
                 top=3)
+
+        elif intent == 'closure_impact':
+            from closure_sim import simulate_closure
+            if 'capacity_per_lane' not in model:
+                return response(503, {'error': 'deployed artifact predates the '
+                                               'closure simulator'})
+            result = simulate_closure(
+                _volume_only, station, direction,
+                parsed.get('start') or parsed.get('date') or today_iso,
+                duration_hours=parsed.get('duration_hours') or 24,
+                capacity_per_lane=model['capacity_per_lane'],
+                station_lanes=model['station_lanes'],
+                neighbor_weights=model['neighbor_weights'],
+                lanes_closed=parsed.get('lanes_closed'),
+                known_stations=known_station_keys(model))
 
         elif intent == 'single_forecast':
             h = parsed.get('hour')

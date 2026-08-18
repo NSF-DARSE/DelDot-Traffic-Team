@@ -122,7 +122,10 @@ def _build_prompt(payload):
 # ----------------------------------------------------------------------
 # Guardrail: numeric containment
 # ----------------------------------------------------------------------
-_NUM_RE = re.compile(r'-?\d[\d,]*\.?\d*')
+# A leading minus only counts as a sign when it is not preceded by a digit or
+# word character. Otherwise a range such as "389-1188" or "08:00-20:00" is
+# misread as containing -1188 / -20, causing spurious guardrail rejections.
+_NUM_RE = re.compile(r'(?<![\w\d])-?\d[\d,]*\.?\d*')
 
 # Small integers are allowed as ordinary prose ("three factors", "9 times out of
 # 10", clock hours). Restricting the check to meaningful magnitudes avoids
@@ -206,6 +209,13 @@ def collect_numbers(obj, acc=None):
         return acc
     if isinstance(obj, (int, float)):
         acc.add(float(obj))
+        # A ratio is naturally read aloud as a percentage: a utilisation of
+        # 0.862 becomes "86.2%", and an over-capacity 1.018 becomes "101.8%".
+        # Permit that restatement for plausible ratios. This only ever licences
+        # x100 of a value that genuinely appears in the result, so it cannot
+        # licence an arbitrary figure.
+        if 0.0 <= float(obj) <= 10.0:
+            acc.add(round(float(obj) * 100, 1))
         return acc
     if isinstance(obj, str):
         for part in re.findall(r'\d+\.?\d*', obj):
@@ -334,7 +344,7 @@ Return ONLY a JSON object, no prose, no code fences.
 
 Schema:
 {
-  "intent": "quietest_hours" | "lowest_impact_window" | "single_forecast" | "unsupported",
+  "intent": "quietest_hours" | "lowest_impact_window" | "closure_impact" | "single_forecast" | "unsupported",
   "station": "STN_0067" or null,
   "direction": "1" | "3" | "5" | "7" or null,
   "date": "YYYY-MM-DD" or null,
@@ -342,6 +352,7 @@ Schema:
   "end": "YYYY-MM-DD" or null,
   "hour": 0-23 or null,
   "duration_hours": integer or null,
+  "lanes_closed": integer or null,
   "align": "day" | "hour" or null,
   "earliest": 0-23 or null,
   "latest": 0-23 or null,
@@ -353,6 +364,10 @@ Rules:
 - "best day/window for a closure, roadworks, maintenance" -> lowest_impact_window,
   set start and end. Use align "day" for "which day", "hour" for "which window".
   Default duration_hours to 24 for a day, 72 for "3 days", and so on.
+- "what happens if / impact of closing X", "effect on the network", or a closure
+  with a stated start -> closure_impact. Set start and duration_hours, and
+  lanes_closed if a partial closure is described ("two of three lanes").
+  Use lowest_impact_window instead when the question asks WHICH day or window.
 - A specific station and hour with no ranking implied -> single_forecast.
 - Resolve relative dates ("tomorrow", "next week") against TODAY given below.
   A week runs Monday to Sunday.
@@ -370,6 +385,9 @@ ABSOLUTE RULES:
 3. Lead with the answer, then the supporting figures.
 4. For closure or roadworks questions, state that this is an analytical estimate
    for planning comparison, not an engineering-grade operational recommendation.
+   If the result names a binding_constraint, say which neighbouring station it is
+   and what utilisation it reaches. If capacity_caveats lists floored stations,
+   note that their utilisation is a lower bound.
 5. Lower forecast volume means lighter traffic; it is not a guarantee of a
    shorter journey.
 6. Plain prose. No markdown, no bullets, no headings. 2 to 5 sentences."""
@@ -431,7 +449,7 @@ def parse_question(question, today_iso, known_stations=None):
         return None, 'intent_not_object'
 
     intent = params.get('intent')
-    if intent not in ('quietest_hours', 'lowest_impact_window',
+    if intent not in ('quietest_hours', 'lowest_impact_window', 'closure_impact',
                       'single_forecast', 'unsupported'):
         return None, 'intent_unrecognised'
 
@@ -457,6 +475,7 @@ def parse_question(question, today_iso, known_stations=None):
         params['earliest'] = _as_int('earliest', 0, 23)
         params['latest'] = _as_int('latest', 0, 23)
         params['duration_hours'] = _as_int('duration_hours', 1, 24 * 14)
+        params['lanes_closed'] = _as_int('lanes_closed', 1, 12)
     except ValueError as err:
         return None, f'intent_invalid_field: {err}'
 

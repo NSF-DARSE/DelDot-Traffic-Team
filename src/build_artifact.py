@@ -59,6 +59,22 @@ def main(version='2.2'):
         sys.exit(f"Missing {cold_path}. Run: python src/cold_start_enhance.py")
     cold = json.loads(cold_path.read_text())
 
+    # Closure simulator inputs. Built here because the Lambda cannot read the
+    # parquet files: it only ever loads this artifact.
+    import pandas as pd
+    from closure_sim import build_capacity_model, build_neighbor_weights
+
+    observed = pd.concat([
+        train[['station_key', 'direction_code', 'volume']],
+        val[['station_key', 'direction_code', 'volume']],
+    ], ignore_index=True)
+    capacity_per_lane, station_lanes = build_capacity_model(observed, network)
+    neighbor_weights = build_neighbor_weights(edges)
+    print(f"\n  capacity model: {len(capacity_per_lane)} stations, "
+          f"per-lane range [{min(capacity_per_lane.values()):.0f}, "
+          f"{max(capacity_per_lane.values()):.0f}]")
+    print(f"  neighbour graph: {len(neighbor_weights)} stations with edges")
+
     artifact = {
         # Base model
         'baselines': stringify(baselines),
@@ -76,6 +92,10 @@ def main(version='2.2'):
         'cold_month_factors_enhanced': cold['cold_month_factors'],
         'cold_dow_factors_enhanced': cold['cold_dow_factors'],
         'cold_trends_enhanced': cold['cold_trends'],
+        # Closure simulator
+        'capacity_per_lane': capacity_per_lane,
+        'station_lanes': station_lanes,
+        'neighbor_weights': neighbor_weights,
         'metadata': {
             'version': version,
             'hour_offset': HOUR_OFFSET,
@@ -84,6 +104,7 @@ def main(version='2.2'):
             'train_hours_covered': sorted(int(h) for h in train['actual_hour'].unique()),
             'cold_start_stations': len(cold_stations),
             'global_trend': global_trend,
+            'capacity_basis': 'observed per-lane throughput proxy',
             'description': DESCRIPTION,
         },
     }
