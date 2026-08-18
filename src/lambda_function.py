@@ -25,8 +25,9 @@ Model paths:
 
 import json
 import os
+import re
 import boto3
-from datetime import datetime
+from datetime import datetime, date
 
 MODEL = None
 S3_BUCKET = os.environ.get('MODEL_BUCKET', 'deldot-traffic-forecasting-062905933333')
@@ -268,14 +269,46 @@ def lambda_handler(event, context):
         params = event.get('queryStringParameters') or {}
         model = load_model()
 
+        # CORS preflight: the browser sends OPTIONS before a request carrying
+        # the x-api-key header.
+        if str(event.get('httpMethod', '')).upper() == 'OPTIONS':
+            return response(200, {'ok': True})
+
         if path in ('/', '/health'):
             return response(200, {
                 'status': 'healthy',
                 'service': 'deldot-traffic-forecast',
                 'model_version': model_version(model),
                 'enhanced_cold_start': 'cold_baselines_enhanced' in model,
-                'endpoints': ['/health', '/forecast', '/explain'],
+                'endpoints': ['/health', '/forecast', '/explain',
+                              '/best-hours', '/best-window', '/ask'],
             })
+
+        # ---- deterministic planning endpoints ----
+        if path == '/best-hours':
+            return handle_best_hours({
+                'station': params.get('station'),
+                'direction': params.get('direction', '1'),
+                'date': params.get('date'),
+                'top': params.get('top', 3),
+                'earliest': params.get('earliest', 6),
+                'latest': params.get('latest', 22),
+            })
+
+        if path == '/best-window':
+            return handle_best_window({
+                'station': params.get('station'),
+                'direction': params.get('direction', '1'),
+                'start': params.get('start'),
+                'end': params.get('end'),
+                'duration_hours': params.get('duration_hours', 24),
+                'align': params.get('align', 'day'),
+                'top': params.get('top', 3),
+            })
+
+        # ---- conversational endpoint ----
+        if path == '/ask':
+            return handle_ask(params, model)
 
         station = params.get('station')
         direction = params.get('direction', '1')
@@ -294,6 +327,22 @@ def lambda_handler(event, context):
             out, err = predict_detailed(station, direction, f"{date_str}T{int(hour):02d}:00:00")
             if err:
                 return response(404, {'error': err})
+
+            # Opt-in plain-English narrative (Amazon Bedrock).
+            # Strictly additive: any failure leaves the deterministic payload intact.
+            if str(params.get('narrate', '')).lower() in ('1', 'true', 'yes'):
+                try:
+                    from narrative import generate_narrative
+                    result = generate_narrative(out)
+                    if result.get('narrative'):
+                        out['narrative'] = result['narrative']
+                    out['narrative_meta'] = {
+                        k: v for k, v in result.items() if k != 'narrative'
+                    }
+                except Exception as e:                    # noqa: BLE001
+                    print(f"Narrative layer unavailable: {e}")
+                    out['narrative_meta'] = {'status': 'error_module_unavailable'}
+
             return response(200, out)
 
         if path == '/forecast':
@@ -325,9 +374,186 @@ def lambda_handler(event, context):
         return response(500, {'error': str(e)})
 
 
+# ======================================================================
+# Planning endpoints (deterministic)
+# ======================================================================
+def _volume_only(station, direction, timestamp_str):
+    """Adapter: planning tools need a plain float per timestamp."""
+    out, err = predict_detailed(station, direction, timestamp_str)
+    if err:
+        raise ValueError(err)
+    return out['prediction']['forecast_volume']
+
+
+def known_station_keys(model):
+    """Every station id the artifact can serve, for validating user input."""
+    keys = set()
+    for src in ('baselines', 'cold_baselines_enhanced'):
+        for k in model.get(src, {}):
+            m = re.search(r"STN_\d{4}", k)
+            if m:
+                keys.add(m.group(0))
+    return keys
+
+
+def handle_best_hours(params):
+    from planning import best_hours
+    station = params.get('station')
+    if not station:
+        return response(400, {'error': 'Missing required parameter: station'})
+    if not params.get('date'):
+        return response(400, {'error': 'Missing required parameter: date (YYYY-MM-DD)'})
+    try:
+        result = best_hours(
+            _volume_only, station, params.get('direction', '1'), params['date'],
+            top=params.get('top', 3),
+            earliest=params.get('earliest', 6),
+            latest=params.get('latest', 22))
+    except ValueError as e:
+        return response(400, {'error': str(e)})
+    result['model_version'] = model_version(load_model())
+    return response(200, result)
+
+
+def handle_best_window(params):
+    from planning import best_window
+    station = params.get('station')
+    if not station:
+        return response(400, {'error': 'Missing required parameter: station'})
+    if not params.get('start') or not params.get('end'):
+        return response(400, {'error': 'Missing required parameters: start and end (YYYY-MM-DD)'})
+    try:
+        result = best_window(
+            _volume_only, station, params.get('direction', '1'),
+            params['start'], params['end'],
+            duration_hours=params.get('duration_hours', 24),
+            align=params.get('align', 'day'),
+            top=params.get('top', 3))
+    except ValueError as e:
+        return response(400, {'error': str(e)})
+    result['model_version'] = model_version(load_model())
+    return response(200, result)
+
+
+# ======================================================================
+# /ask — natural language over the deterministic tools
+# ======================================================================
+def handle_ask(params, model):
+    """
+    Parse a question, run the matching deterministic tool, then narrate.
+
+    The language model does two bounded jobs: sentence -> parameters, and
+    result -> prose. The answer itself is always computed by `planning.py`.
+    """
+    question = (params.get('q') or params.get('question') or '').strip()
+    if not question:
+        return response(400, {'error': "Missing required parameter: q (the question)"})
+    if len(question) > 500:
+        return response(400, {'error': 'Question too long (max 500 characters)'})
+
+    today_iso = date.today().isoformat()
+
+    try:
+        from narrative import parse_question, narrate_answer
+    except Exception as e:                                # noqa: BLE001
+        print(f"Conversational layer unavailable: {e}")
+        return response(503, {'error': 'conversational layer unavailable',
+                              'detail': str(e)})
+
+    parsed, err = parse_question(question, today_iso, known_station_keys(model))
+    if err:
+        return response(422, {
+            'question': question,
+            'error': 'could_not_interpret_question',
+            'detail': err,
+            'hint': 'Name a station such as STN_0067 and a date or date range. '
+                    'Examples: "best time to travel on STN_0067 tomorrow", '
+                    '"best day for a closure on STN_0053 next week".',
+        })
+
+    intent = parsed.get('intent')
+    if intent == 'unsupported':
+        return response(422, {
+            'question': question, 'interpreted_as': parsed,
+            'error': 'question_not_about_traffic_forecasting',
+        })
+
+    station = parsed.get('station')
+    if not station:
+        return response(422, {
+            'question': question, 'interpreted_as': parsed,
+            'error': 'no_station_identified',
+            'hint': 'Include a station id, for example STN_0067.',
+        })
+    direction = parsed.get('direction') or '1'
+
+    # ---- run the deterministic tool ----
+    try:
+        if intent == 'quietest_hours':
+            from planning import best_hours
+            result = best_hours(
+                _volume_only, station, direction,
+                parsed.get('date') or today_iso,
+                top=3,
+                earliest=parsed.get('earliest') if parsed.get('earliest') is not None else 6,
+                latest=parsed.get('latest') if parsed.get('latest') is not None else 22)
+
+        elif intent == 'lowest_impact_window':
+            from planning import best_window
+            start = parsed.get('start') or today_iso
+            end = parsed.get('end') or start
+            result = best_window(
+                _volume_only, station, direction, start, end,
+                duration_hours=parsed.get('duration_hours') or 24,
+                align=parsed.get('align') or 'day',
+                top=3)
+
+        elif intent == 'single_forecast':
+            h = parsed.get('hour')
+            if h is None:
+                return response(422, {
+                    'question': question, 'interpreted_as': parsed,
+                    'error': 'no_hour_identified',
+                    'hint': 'Include an hour, for example "at 4pm".'})
+            d = parsed.get('date') or today_iso
+            out, perr = predict_detailed(station, direction, f"{d}T{int(h):02d}:00:00")
+            if perr:
+                return response(404, {'error': perr})
+            result = {'question': 'single_forecast', **out['prediction'],
+                      'prediction_path': out['explanation']['prediction_path']}
+        else:
+            return response(422, {'error': 'intent_unrecognised', 'interpreted_as': parsed})
+
+    except ValueError as e:
+        return response(400, {'question': question, 'interpreted_as': parsed,
+                              'error': str(e)})
+
+    # ---- narrate the computed result ----
+    payload = {
+        'question': question,
+        'interpreted_as': {k: v for k, v in parsed.items() if v is not None},
+        'answer': result,
+        'model_version': model_version(model),
+    }
+    narration = narrate_answer(question, result)
+    if narration.get('narrative'):
+        payload['narrative'] = narration['narrative']
+    payload['narrative_meta'] = {k: v for k, v in narration.items()
+                                 if k != 'narrative'}
+    return response(200, payload)
+
+
 def response(status_code, body):
     return {
         'statusCode': status_code,
-        'headers': {'Content-Type': 'application/json'},
+        'headers': {
+            'Content-Type': 'application/json',
+            # Required for the browser chat page. The API is still protected by
+            # the API key (checked at API Gateway before the request reaches
+            # here); CORS only controls which origins may read the response.
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,x-api-key',
+            'Access-Control-Allow-Methods': 'GET,OPTIONS',
+        },
         'body': json.dumps(body),
     }
