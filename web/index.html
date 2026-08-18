@@ -111,6 +111,33 @@
     </div>
   </div>
 
+
+  <div class="card">
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+      <strong style="font-size:14px">API explorer</strong>
+      <span style="font-size:13px;color:var(--muted)">call any endpoint directly and see the raw JSON</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="ep" onchange="presetEp()"
+              style="padding:9px;border:1px solid var(--line);border-radius:6px;font:inherit">
+        <option value="/health">/health</option>
+        <option value="/forecast">/forecast</option>
+        <option value="/explain">/explain</option>
+        <option value="/best-hours">/best-hours</option>
+        <option value="/best-window">/best-window</option>
+        <option value="/simulate-closure" selected>/simulate-closure</option>
+        <option value="/ask">/ask</option>
+      </select>
+      <input id="qs" placeholder="query string"
+             style="flex:1;min-width:280px;padding:9px 11px;border:1px solid var(--line);border-radius:6px;font:inherit;font-family:ui-monospace,monospace;font-size:13px"
+             onkeydown="if(event.key==='Enter')callApi()">
+      <button onclick="callApi()"
+              style="background:var(--accent);color:#fff;border:0;border-radius:6px;padding:9px 18px;font:inherit;font-weight:600;cursor:pointer">Send</button>
+    </div>
+    <div id="reqline" class="meta" style="font-family:ui-monospace,monospace"></div>
+    <pre id="raw" style="display:none"></pre>
+  </div>
+
   <footer>
     Analytical estimates for planning comparison. Not engineering-grade operational,
     safety, or capacity recommendations.
@@ -268,6 +295,51 @@ async function ask(preset){
     push(w);
   }finally{
     btn.disabled=false; btn.textContent='Ask';
+  }
+}
+
+const PRESETS = {
+  '/health': '',
+  '/forecast': 'station=STN_0067&direction=1&date=2026-08-20&hour=16',
+  '/explain': 'station=STN_0067&direction=1&date=2026-08-20&hour=16&narrate=true',
+  '/best-hours': 'station=STN_0067&direction=1&date=2026-08-20&top=3',
+  '/best-window': 'station=STN_0067&direction=1&start=2026-08-24&end=2026-08-30&duration_hours=24&align=day',
+  '/simulate-closure': 'station=STN_0053&direction=1&start=2026-08-30&duration_hours=72&lanes_closed=2',
+  '/ask': 'q=what happens if I close two of three lanes at STN_0053 for 72 hours starting August 30 2026'
+};
+function presetEp(){
+  const ep = document.getElementById('ep').value;
+  document.getElementById('qs').value = PRESETS[ep] || '';
+}
+presetEp();
+
+async function callApi(){
+  const ep  = document.getElementById('ep').value;
+  const qs  = document.getElementById('qs').value.trim();
+  const out = document.getElementById('raw');
+  const line = document.getElementById('reqline');
+  const key = sessionStorage.getItem('deldot_key');
+  out.style.display = 'block';
+  if(!key){ out.textContent = 'Enter the API key at the top of the page first.'; return; }
+
+  // Encode each value but keep & and = as separators, so spaces in q= work.
+  const encoded = qs ? qs.split('&').map(pair=>{
+    const i = pair.indexOf('=');
+    return i < 0 ? pair : pair.slice(0,i) + '=' + encodeURIComponent(pair.slice(i+1));
+  }).join('&') : '';
+  const url = API + ep + (encoded ? '?' + encoded : '');
+
+  line.textContent = 'GET ' + ep + (encoded ? '?' + encoded : '');
+  out.textContent = 'requesting…';
+  const t0 = performance.now();
+  try{
+    const r = await fetch(url, {headers:{'x-api-key':key}});
+    const d = await r.json();
+    const ms = Math.round(performance.now() - t0);
+    line.textContent = `GET ${ep} → HTTP ${r.status} · ${ms} ms`;
+    out.textContent = JSON.stringify(d, null, 2);
+  }catch(e){
+    out.textContent = 'Request failed: ' + e.message;
   }
 }
 </script>

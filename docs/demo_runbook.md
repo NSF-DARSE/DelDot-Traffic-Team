@@ -63,6 +63,25 @@ The page has four quick-action buttons, so nothing needs typing.
 | Narrative missing, table still shows | Bedrock hiccup or guardrail rejection | the computation is still correct; expand "Show computation". Re-ask — it is usually transient |
 | Page will not load | CloudFront edge issue | fall back to calling the API directly (below) |
 
+### Calling the API from a browser
+
+The API needs an `x-api-key` **header**, which a URL bar cannot send. Three ways:
+
+1. **API explorer on the page** (easiest). Pick an endpoint from the dropdown,
+   adjust the query string, press Send. Shows the raw JSON, the HTTP status and
+   the response time. Good answer if a judge asks to see the API directly.
+2. **"Show computation"** under any chat answer — the same JSON the endpoint
+   returns.
+3. **Devtools console** (F12), on the page so the origin is allowed:
+
+```javascript
+k = sessionStorage.getItem('deldot_key');
+A = 'https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod';
+f = (p) => fetch(A+p, {headers:{'x-api-key':k}}).then(r=>r.json()).then(d=>console.log(d));
+
+f('/simulate-closure?station=STN_0053&start=2026-08-30&duration_hours=72&lanes_closed=2')
+```
+
 **Direct API fallback**, works in any terminal:
 
 ```bash
