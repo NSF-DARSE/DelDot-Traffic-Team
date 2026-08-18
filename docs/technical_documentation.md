@@ -7,11 +7,72 @@ stations in Delaware's road network. The model predicts hourly traffic volumes
 with confidence intervals and reliability assessments, including for 43 stations
 with no prior observations ("cold-start" stations).
 
-**Final Performance:**
-- MAE: 121 vehicles/hour (base model), ~108 with LightGBM refinement
-- R²: 0.938 on validation data (Jan–Jun 2025)
-- 90% prediction interval coverage: 89.2% (target: 90%)
+> **Data revision 2026-08-18.** Stakeholders supplied a corrected
+> `traffic_train.parquet` (984,984 rows, all 24 hours, correct timestamps),
+> replacing the original file which had only hours 0–21 mislabelled by −2 hours.
+> `HOUR_OFFSET` is now 0 and the hours 0–1 extrapolation was removed. All
+> numbers below are recomputed on the corrected data.
+
+**Final Performance** (validation, Jan–Jun 2025; warm stations only):
+- **WAPE: 13.43%** (base 15.28%) — *primary organiser metric*
+- MAE: 103 vehicles/hour (base 118)
+- R²: 0.954
+- GEH < 5: 77.2%; GEH < 10: 93.4%
+- 90% prediction interval coverage: 90.7% (target: 90%)
 - Submission: 170,956 predictions — PASS validation
+
+---
+
+## Evaluation Metrics
+
+**WAPE is the primary metric.** Confirmed by the organisers on 2026-08-18:
+
+```
+WAPE = sum|y - yhat| / sum|y|
+```
+
+Lower is better. WAPE weights every error by its absolute size, so high-volume
+hours dominate. This matters because it disagrees with GEH<5, which is a *hit
+rate* that low-volume rows pass easily — a model can win one and lose the other.
+
+**Scoring is per-condition, not one pool.** The organisers score across defined
+conditions rather than an undifferentiated average. The three that matter here:
+
+| Slice | Meaning |
+|-------|---------|
+| warm-future | Observed station, future period |
+| cold-interp | Unobserved station, period covered by other stations |
+| cold-future | Unobserved station, future period |
+
+Our validation set contains only warm stations, so the numbers in this document
+measure warm performance. Cold-slice performance can only be measured by hiding
+whole stations — see `benchmark/` for that harness.
+
+**Uncertainty outputs are scored separately.**
+
+- `lower_90` / `upper_90` — interval calibration, evaluated via coverage
+  (`cov90`) and Winkler score.
+- `reliability_score` — a **relative 0–1 confidence indicator**. It is *not* the
+  probability of any specific event, and should not be read as one. It ranks
+  which predictions we trust more, and is evaluated separately from interval
+  calibration.
+
+### Metric comparison, our model vs the benchmark harness
+
+`benchmark/` (added 2026-08-18) evaluates models on frozen folds across all three
+slices. Its `team_v1_reimpl` is a reimplementation of the `src/` model documented
+here. On the protocol arm:
+
+| model | warm-future WAPE | cold-interp WAPE | cold-future WAPE |
+|---|---:|---:|---:|
+| `backbone_seasonal` | **13.11** | **34.29** | **36.34** |
+| `slice_routed_lgbm` | 14.35 | 34.03 | 36.65 |
+| `team_v1_reimpl` (this model) | 15.55 | 44.38 | 47.51 |
+
+The benchmark's seasonal backbone outperforms this model on every slice, most
+sharply on the cold slices (34.29 vs 44.38 WAPE). The two arms in `benchmark/`
+are not comparable to each other, and neither is directly comparable to the
+warm-only validation figures above — see `benchmark/LEADERBOARD.md`.
 
 ---
 
@@ -24,26 +85,26 @@ forecast = station_baseline × hour_factor × dow_factor × month_factor
 
 ### Layer 1: Station-Level Baseline
 - **Known stations (75):** Mean volume per station×direction from training data
-- **Cold-start stations (43):** Ridge regression on road features (R²=0.71) 
+- **Cold-start stations (43):** Ridge regression on road features (R²=0.715) 
   blended 40/60 with weighted neighbor averages via network edges
 
 ### Layer 2: Temporal Profiles (Multiplicative)
 - **Hour × Weekend:** 48 factors (24 hours × weekday/weekend), capturing AM/PM 
   peaks and the flatter weekend shape
-- **Day of Week:** 7 factors (Friday +12%, Sunday -14% vs mean)
-- **Month:** 12 factors (July +13%, November -28%)
+- **Day of Week:** 7 factors (Friday +12%, Sunday -13% vs mean)
+- **Month:** 12 factors (July +14%, November -28%)
 - **Station-specific adjustments:** Per-station deviations from global profiles,
   with hierarchical shrinkage (stations with less data pulled toward global)
 
 ### Layer 3: Year-over-Year Trend
-- Volume-weighted trend: 2025 volumes are ~10% below 2024 (factor = 0.8985)
+- Volume-weighted trend: 2025 volumes are ~10% below 2024 (factor = 0.8988)
 - Per-station trends computed for all 72 observable stations
 
 ### Layer 4: LightGBM Residual Correction
 - Trained on validation residuals (actual - base prediction)
 - Features: temporal (hour, dow, month, week_of_year), station context 
   (lanes, speed, AADT band, functional class), base prediction level
-- Improvement: 10.9% MAE reduction on held-out months
+- Improvement: 8.2% MAE reduction on held-out months
 - Blend weight: 70% of LGB correction applied
 
 ### Uncertainty Layer
@@ -74,7 +135,7 @@ actual hours 2–23. Hours 0–1 exist only in validation data.
 
 | Dataset | Rows | Stations | Period | Hours |
 |---------|------|----------|--------|-------|
-| Training | 902,902 | 75 | 2024 full year | 0–21 (= actual 2–23) |
+| Training | 984,984 | 75 | 2024 full year | 0–23 (corrected file, 2026-08-18) |
 | Validation | 556,800 | 75 | Jan–Jun 2025 | 0–23 |
 | Submission | 170,956 | 118 (43 new) | Jan 2024–Dec 2025 | 0–23 |
 
@@ -147,7 +208,7 @@ from neighboring stations and fit station-specific profiles:
 
 1. **Synthetic history generation:** For each cold-start station, take the
    weighted average of all hourly observations from connected known neighbors
-   (Jan 2024 – Jun 2025). Weight by edge type (same_corridor=2×, proximity=1×)
+   (Jan 2024 – Jun 2025; 1,541,784 observed rows). Weight by edge type (same_corridor=2×, proximity=1×)
    and distance (≤1mi=3×, 1-5mi=2×, 5-15mi=1×).
 
 2. **Volume scaling:** Scale synthetic history to match the station's predicted
@@ -160,11 +221,11 @@ from neighboring stations and fit station-specific profiles:
    - Per-station trend (from neighbor trends)
 
 4. **Feature regression fallback:** For 2 fully isolated stations with no
-   connected neighbors, use Ridge regression (R²=0.713) on road features
+   connected neighbors, use Ridge regression (R²=0.715) on road features
    with global temporal profiles.
 
 5. **Results:**
-   - 41/43 cold-start stations have neighbor-weighted profiles (7,872 hour factors)
+   - 41/43 cold-start stations have neighbour-weighted profiles (7,872 hour factors)
    - Cold-start reliability improved from 0.42 → 0.559 (+33%)
    - LightGBM correction applied with reduced weight (0.3 vs 0.7 for known stations)
 
@@ -203,7 +264,7 @@ Empirical coverage on validation: **89.2%** (target 90%).
 ### Validation Strategy
 
 **What's validated empirically:**
-- 75 known stations on Jan–Jun 2025 (validation set): GEH=3.86, MAE=105
+- 75 known stations on Jan–Jun 2025 (validation set): GEH=3.64, MAE=103
 - LightGBM trained on months 1–4, tested on months 5–6 of validation
 
 **What's validated only internally (synthetic/structural checks):**
@@ -224,11 +285,11 @@ from Jul–Dec 2025 are assumed available.
 
 | Segment | MAE | Notes |
 |---------|-----|-------|
-| Overall (base) | 121 | Multiplicative model on validation |
-| Overall (+ LightGBM) | 105 | 10.9% improvement |
+| Overall (base) | 118 | Multiplicative model on validation |
+| Overall (+ LightGBM) | 103 | 8.2% improvement |
 | Peak hours (7-9, 16-18) | ~140 | Higher volume = higher absolute error |
 | Night (0-5) | ~60-80 | Low volume, small errors |
-| Hours 0-1 (extrapolated) | ~70 | Learned from validation — works well |
+| Hours 0-1 | ~28 | Now real training data (was extrapolated) |
 
 ### GEH Statistic (Industry Standard for Traffic Models)
 
@@ -241,35 +302,37 @@ ahead — a harder task.
 
 | Metric | Base Model | + LightGBM |
 |--------|-----------|------------|
-| Mean GEH | 4.40 | **3.86** |
-| Median GEH | 2.98 | **2.66** |
-| % GEH < 5 (Good) | 68.7% | **74.3%** |
-| % GEH < 10 (Acceptable) | 90.4% | **93.1%** |
-| MAE | 121.5 | **105.3** |
+| Mean GEH | 4.05 | **3.64** |
+| Median GEH | 2.63 | **2.43** |
+| % GEH < 5 (Good) | 73.2% | **77.2%** |
+| % GEH < 10 (Acceptable) | 91.5% | **93.4%** |
+| MAE | 117.7 | **103.4** |
 
 **GEH by volume level (with LightGBM):**
 
 | Volume Range | GEH < 5 | Mean GEH | n |
 |-------------|---------|----------|---|
-| Very low (0-100) | 78.6% | 3.23 | 120,254 |
-| Low (100-500) | 79.5% | 3.33 | 174,147 |
-| Medium (500-1k) | 76.1% | 3.75 | 118,131 |
-| High (1k-2k) | 69.2% | 4.49 | 92,182 |
-| Very high (2k+) | 52.5% | 6.20 | 52,086 |
+| Very low (0-100) | 89.9% | 2.42 | 120,254 |
+| Low (100-500) | 80.4% | 3.25 | 174,147 |
+| Medium (500-1k) | 76.7% | 3.68 | 118,131 |
+| High (1k-2k) | 69.4% | 4.47 | 92,182 |
+| Very high (2k+) | 52.0% | 6.22 | 52,086 |
 
 **Note:** The 85% GEH < 5 standard was designed for microsimulation models that
 are iteratively calibrated against the exact observed dataset. Our model achieves
-74.3% as a batch forecast 6 months ahead — a fundamentally harder task. The
-93.1% acceptable rate (GEH < 10) demonstrates the model produces usable
+77.2% as a batch forecast 6 months ahead — a fundamentally harder task. The
+93.4% acceptable rate (GEH < 10) demonstrates the model produces usable
 forecasts across almost all conditions.
 
 ### Key Metrics Summary
-- MAE: 121 (base), **105** (with LGB)
-- RMSE: 238
-- MAPE: 29.6% (excluding volumes < 10)
-- R²: 0.938
-- Mean GEH: **3.86** (with LGB)
-- GEH < 5: **74.3%** | GEH < 10: **93.1%**
+- **WAPE: 13.43%** (base 15.28%) — primary metric
+- MAE: 118 (base), **103** (with LGB)
+- RMSE: 235
+- MAPE: 24.7% (excluding volumes < 10)
+- R²: 0.954
+- Mean GEH: **3.64** (with LGB)
+- GEH < 5: **77.2%** | GEH < 10: **93.4%**
+- Scope: warm stations only (validation contains no cold-start stations)
 
 ---
 
@@ -352,12 +415,33 @@ source .venv/bin/activate
 pip install pandas numpy pyarrow scikit-learn lightgbm
 ```
 
-### Run Locally (generate submission)
+### Run Locally (full regeneration)
 ```bash
 source .venv/bin/activate
-python3 model/src/run_pipeline.py
-python3 validate_submission.py model/output/submission.csv
+
+# 1. Reconstruct cold-start profiles from neighbouring stations
+python3 src/cold_start_enhance.py
+
+# 2. Build the deployable model artifact
+python3 src/build_artifact.py 2.2
+
+# 3. Generate the submission
+python3 src/run_pipeline.py
+
+# 4. Validate
+python3 validate_submission.py output/submission.csv
 ```
+
+### Deploy to AWS
+```bash
+# Requires valid AWS credentials (workshop tokens expire)
+export DELDOT_API_KEY=<api key>     # optional, for the verification step
+bash scripts/deploy.sh 2.2
+```
+This uploads the artifact, deploys both Lambdas, points them at the new
+artifact, regenerates the 30-day rolling forecast, refreshes QuickSight SPICE,
+and verifies that the API reports the new version and rejects unauthenticated
+requests.
 
 ### Test Live API
 ```bash

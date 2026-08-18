@@ -1,5 +1,11 @@
 # Scenario Analysis — Methodology & Results
 
+> **Data revision 2026-08-18.** Volumes below are recomputed on the corrected
+> `traffic_train.parquet`. Station means fell ~6-8% versus the original file because
+> hours 00:00-01:00 are now included in each average; this is a denominator effect,
+> not a change in traffic. Scenario percentages are unaffected except SCENARIO_02,
+> which is volume-derived (+40.2% -> +40.9%).
+
 ## Overview
 
 Five operational scenarios were analyzed to estimate traffic volume impacts,
@@ -16,7 +22,7 @@ These are **analytical estimates**, not engineering-grade operational prediction
 | ID | Scenario | Station | Impact | Recovery | Reliability |
 |----|----------|---------|--------|----------|-------------|
 | 01 | Major road closure | STN_0108 | -27.5% [-42.5%, -17.5%] | 48h | 0.65 |
-| 02 | Special event surge | STN_0037 | +40.2% [+25.2%, +60.2%] | 6h | 0.55 |
+| 02 | Special event surge | STN_0037 | +40.9% [+25.9%, +60.9%] | 6h | 0.55 |
 | 03 | Severe winter storm | STN_0066 | -45.0% [-60.0%, -30.0%] | 36h | 0.60 |
 | 04 | Construction zone | STN_0053 | -15.0% [-22.0%, -8.0%] | 168h (1 wk) | 0.70 |
 | 05 | Corridor cascade | STN_0114 | -25.0% [-40.0%, -15.0%] | 4h | 0.55 |
@@ -28,7 +34,7 @@ These are **analytical estimates**, not engineering-grade operational prediction
 ### SCENARIO_01: Major Road Closure (Emergency Bridge Repair)
 
 **Station:** STN_0108 — 5-lane Interstate, 65 mph, 100k+ AADT  
-**Normal volume:** 4,872 veh/hr average; 7,112 veh/hr peak
+**Normal volume:** 4,568 veh/hr average; 7,112 veh/hr peak
 
 **Event:** Emergency repair requiring closure of 4 of 5 lanes (80% capacity reduction).
 
@@ -54,19 +60,19 @@ These are **analytical estimates**, not engineering-grade operational prediction
 
 ### SCENARIO_02: Special Event (Holiday Weekend Traffic Surge)
 
-**Station:** STN_0037 — strongest weekend uplift in network (+18% vs weekday)
+**Station:** STN_0037 — strongest weekend uplift in network (+18.8% vs weekday)
 
-**Normal volume:** 294 veh/hr average; weekends average 330 veh/hr
+**Normal volume:** 271 veh/hr average; weekends average 306 veh/hr
 
 **Event:** Major holiday weekend (July 4th type) or large venue event near this station.
 
 **Analysis:**
-- This station already shows the highest weekend uplift (+18%), suggesting
+- This station already shows the highest weekend uplift (+18.8%), suggesting
   recreational/event-driven traffic patterns
 - Transportation literature indicates major events add 15–30% above normal
   weekend volumes for nearby corridors
 - Conservative estimate: 25% above normal weekend level
-- Combined effect vs. overall baseline: **+40.2%**
+- Combined effect vs. overall baseline: **+40.9%** (event estimate 382 veh/hr)
 
 **Recovery:** Event traffic dissipates within **6 hours** of event conclusion.
 
@@ -81,7 +87,7 @@ These are **analytical estimates**, not engineering-grade operational prediction
 
 **Station:** STN_0066 — 2-lane Interstate, 55 mph, 50k–100k AADT
 
-**Normal volume:** 1,849 veh/hr average
+**Normal volume:** 1,724 veh/hr average
 
 **Event:** Major winter storm with significant icing.
 
@@ -92,7 +98,7 @@ These are **analytical estimates**, not engineering-grade operational prediction
   - Ice storms: -40 to -70% volume
 - This station is high-speed (55 mph), 2-lane, likely rural — maximally
   exposed to weather sensitivity
-- Major ice event estimate: **-45%** reduction (volume drops to ~1,017 veh/hr)
+- Major ice event estimate: **-45%** reduction (volume drops to ~948 veh/hr)
 
 **Recovery:** 
 - Storm duration: ~24 hours
@@ -111,7 +117,7 @@ These are **analytical estimates**, not engineering-grade operational prediction
 **Station:** STN_0053 — 3-lane Interstate, 55 mph, 50k–100k AADT  
 **Connected corridor:** STN_0066 (1–5 mi), STN_0118 (1–5 mi)
 
-**Normal volume:** 2,237 veh/hr average
+**Normal volume:** 2,086 veh/hr average; 3,705 veh/hr peak
 
 **Event:** Long-term construction project (6+ months), one lane permanently closed.
 
@@ -136,7 +142,7 @@ to stabilize.
 
 ### SCENARIO_05: Corridor Disruption (Upstream Cascade / Spillback)
 
-**Corridor:** STN_0064 (downstream, 1,864 avg) → STN_0114 (upstream, 1,900 avg)  
+**Corridor:** STN_0064 (downstream, 1,747 avg) → STN_0114 (upstream, 1,781 avg)  
 **Distance:** ≤1 mile apart, same corridor
 
 **Event:** Major multi-lane incident on STN_0064 (downstream) during peak hours.

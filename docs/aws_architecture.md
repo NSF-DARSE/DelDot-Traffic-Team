@@ -49,7 +49,7 @@ traffic monitoring stations and displays them in an interactive dashboard.
 
 | Path | Content | Size |
 |------|---------|------|
-| `models/v2/model_artifact.json` | Serialized model parameters | 415 KB |
+| `models/v2.2/model_artifact.json` | Serialised model + enhanced cold-start | 976 KB |
 | `forecasts/submission_2025-08-17.csv` | Competition submission | 10.5 MB |
 | `quicksight/rolling/forecast_latest.csv` | **Live 30-day rolling forecast** | 38.9 MB |
 | `quicksight/rolling/history/` | Daily forecast archives | 38.9 MB each |
@@ -78,6 +78,12 @@ Requests without a valid key receive `HTTP 403`.
 - `GET /forecast?station=STN_0067&direction=1&date=2026-09-15` — Full 24-hour profile
 - `GET /explain?station=STN_0067&direction=1&date=2026-09-15&hour=16` — Factor-by-factor
   decomposition of the prediction (see `security_privacy_explainability.md`)
+- `GET /explain?...&narrate=true` — adds a Bedrock-generated plain-English narrative,
+  guarded by numeric containment (see `bedrock_narrative_layer.md`)
+
+- `GET /best-hours?station=STN_0067&date=2026-08-19` — quietest hours (deterministic)
+- `GET /best-window?station=STN_0067&start=...&end=...` — lowest-impact work window (deterministic)
+- `GET /ask?q=...` — natural-language planning questions (see `traffic_assistant.md`)
 
 **Rate limits:** 25 req/s, burst 50, 50,000 requests/month quota.
 

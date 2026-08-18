@@ -9,8 +9,13 @@ and documents the solution approach for each before implementation begins.
 
 ## 1. Missing Hours 22–23 in Training Data → ACTUALLY: Timestamp Offset
 
-**Problem (initial):** Training data only contains hours 0–21. Submission
-requires all 24 hours.
+**Problem (initial):** The original training file contained only hours 0–21.
+Submission requires all 24 hours.
+
+**RESOLVED AT SOURCE (2026-08-18):** Stakeholders supplied a corrected
+`traffic_train.parquet` with all 24 hours and correct timestamps (984,984 rows,
+up from 902,902). `HOUR_OFFSET` is now 0 and no extrapolation is needed. The
+sections below are retained as a record of the original diagnosis.
 
 **CRITICAL DISCOVERY DURING IMPLEMENTATION:**
 The training timestamps are systematically offset by +2 hours from
@@ -110,7 +115,7 @@ This could be:
 
 **Solution:**
 - Estimate per-station trend ratio: val_mean / train_mean (for overlapping
-  months and hours 0–21 only)
+  months only; all 24 hours now available in both datasets)
 - Apply this ratio to 2025 predictions: `trend_factor = 0.882` (average)
 - Per-station ratios available for all 75 known stations (std=0.09)
 - For cold-start stations: use the global average trend (0.882)
@@ -247,15 +252,15 @@ generalizable patterns.
 
 | Edge Case | Impact | Strategy | Risk Level | Status |
 |-----------|--------|----------|------------|--------|
-| Timestamp offset (+2h) | ALL targets | Corrected in preprocessing | CRITICAL | ✅ Resolved |
+| Timestamp offset (+2h) | ALL targets | Fixed upstream by stakeholders 2026-08-18; HOUR_OFFSET now 0 | CRITICAL | ✅ Resolved at source |
 | Cold-start (43 stations) | ~36% of stations | Synthetic history + station-specific profiles | High | ✅ Enhanced |
 | Zero volumes | 0.9% of train | Natural-scale model, floor at 0 | Low | ✅ Handled |
 | Sparse station history | 35 of 75 stations | Hierarchical shrinkage | Medium | ✅ Implemented |
-| YoY trend | All 2025+ targets | Per-station ratio (0.8985 global) | Low | ✅ Implemented |
+| YoY trend | All 2025+ targets | Per-station ratio (0.8988 global) | Low | ✅ Implemented |
 | Direction handling | All targets | Independent station×direction modeling | Low | ✅ Implemented |
 | Sparse targets | Evaluation design | Independent prediction per target | Low | ✅ Non-issue |
 | PI calibration | 15% of score | Empirical quantiles (89.2% coverage) | Medium | ✅ Calibrated |
 | Reliability scores | Part of scoring | Factor-based heuristic (0.32–0.82) | Medium | ✅ Implemented |
 | 2024 holdouts | 81 rows | Same model, trend=1.0 | Low | ✅ Handled |
-| LightGBM overfit | Model quality | Residual-only + regularization (10.9% improvement) | Medium | ✅ Validated |
+| LightGBM overfit | Model quality | Residual-only + regularisation (8.2% improvement) | Medium | ✅ Validated |
 | Data leakage | Disqualification | No future info used | Low | ✅ Verified |

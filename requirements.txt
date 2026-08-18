@@ -1,0 +1,14 @@
+# Core pipeline (src/) — required to reproduce the submission
+pandas==3.0.5
+numpy==2.5.2
+pyarrow==25.0.1          # reading the .parquet traffic files
+scikit-learn==1.9.0      # Ridge regression for cold-start baselines
+lightgbm==4.7.0          # residual correction layer
+
+# AWS Lambda handlers (src/lambda_*.py, src/narrative.py)
+# boto3 is preinstalled in the Lambda runtime; needed only for local testing.
+boto3==1.43.73
+
+# The model-comparison harness (benchmark/) additionally requires PyTorch for
+# its GNN models. Install separately, matching your platform:
+#   pip install torch

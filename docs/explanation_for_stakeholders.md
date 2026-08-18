@@ -44,8 +44,8 @@ stations to *estimate* their typical volume. It's like saying: "This is a
 Traffic seems to have incredibly regular rhythms:
 - **Hourly:** Very low at 2am, builds to a morning rush (7-9am), lunch bump,
   then a bigger evening peak (4-6pm)
-- **Day of week:** Friday is 12% busier than average; Sunday is 14% quieter
-- **Monthly/seasonal:** July is the busiest month (+13%); November is quietest (-28%)
+- **Day of week:** Friday is 12% busier than average; Sunday is 13% quieter
+- **Monthly/seasonal:** July is the busiest month (+14%); November is quietest (-28%)
 - **Weekend shape:** Weekends don't have the commuter spikes — traffic builds
   gradually and peaks around midday
 
@@ -63,7 +63,7 @@ After the basic recipe does its job, there are still small patterns it misses
 — maybe a specific road type behaves differently at certain times of year, or
 certain week numbers are unusual. A machine learning model (LightGBM) learns
 these leftover patterns and makes small corrections. This improved accuracy
-by another **11%**.
+by another **8%**.
 
 ---
 
@@ -73,7 +73,7 @@ The single biggest insight was discovering that the **training data timestamps
 were shifted by 2 hours** compared to the submission timestamps. Without
 fixing this, the model thought rush hour was at 2pm instead of 4pm, and all
 predictions were systematically wrong. After correcting the alignment,
-accuracy jumped from R²=0.76 to **R²=0.94**.
+accuracy jumped from R²=0.76 to **R²=0.94**. Stakeholders later supplied a corrected file with proper timestamps and the two missing hours, which lifted accuracy again to **R²=0.95**.
 
 This is the kind of data quality issue that can only be found by careful
 exploratory analysis — and it made all the difference.
@@ -91,7 +91,7 @@ For each prediction, we also provide:
 
 2. **A reliability score (0 to 1):** A quick summary of how much to trust
    this particular prediction. Known stations in regular hours get 0.75–0.82.
-   New stations with no history get 0.32–0.45.
+   New stations with no history get 0.32–0.45. This is a *relative* ranking, not a probability — the confidence range above is what carries the statistical guarantee.
 
 ---
 
@@ -103,7 +103,7 @@ For each prediction, we also provide:
 | **Handles new stations** | Uses road characteristics and nearby stations — doesn't require years of data. |
 | **Robust** | The multiplicative structure means a single bad estimate doesn't destroy everything. |
 | **Calibrated uncertainty** | Confidence intervals tested against real data: 89.2% coverage (target: 90%). |
-| **Accurate** | Average error of ~105 vehicles/hour with R²=0.94 on validation data. |
+| **Accurate** | Average error of ~103 vehicles/hour with R²=0.95 on validation data. |
 | **Cost-effective** | Runs on AWS serverless for ~$210/month. No expensive always-on infrastructure. |
 
 ---
@@ -111,10 +111,11 @@ For each prediction, we also provide:
 ## Results at a Glance
 
 - **170,956 predictions** generated across 118 stations
-- **93.8% of traffic variation explained** (R² = 0.938)
-- **Average error: ~105 vehicles/hour** (with machine learning refinement)
-- **GEH statistic: 3.86 mean** (industry uses < 5 as "good")
-- **93.1% of predictions** are within acceptable accuracy (GEH < 10)
+- **95.4% of traffic variation explained** (R² = 0.954)
+- **Average error: ~103 vehicles/hour** (with machine learning refinement)
+- **GEH statistic: 3.64 mean** (industry uses < 5 as "good")
+- **93.4% of predictions** are within acceptable accuracy (GEH < 10)
+- **WAPE 13.43%** — the organisers' primary accuracy measure (lower is better)
 - **43 new stations** predicted using synthetic history from neighbors
 - **Submission validates: PASS** ✓
 
