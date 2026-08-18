@@ -17,6 +17,7 @@ Date: 2025-08-17
 """
 
 import sys
+import json
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -37,8 +38,32 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent / 'output'
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def predict_base(df, components, is_2025=True):
-    """Generate base multiplicative predictions for a DataFrame."""
+def load_cold_start_enhanced():
+    """
+    Load the synthetic-history cold-start profiles produced by
+    src/cold_start_enhance.py.
+
+    Required: cold-start stations get station-specific hour, day-of-week and
+    month profiles from this artifact rather than the network-average profiles.
+    Without it the submission differs materially (mean forecast 776.6 vs 798.2),
+    so a missing file is a hard error rather than a silent fallback.
+    """
+    path = OUTPUT_DIR / 'cold_start_enhanced.json'
+    if not path.exists():
+        sys.exit(f"Missing {path}.\nRun first: python3 src/cold_start_enhance.py")
+    with open(path) as fh:
+        return json.load(fh)
+
+
+def predict_base(df, components, cold_enhanced, train_stations):
+    """
+    Generate base multiplicative predictions for a DataFrame.
+
+    Known stations use observed baselines, profiles and station-level
+    adjustments. Cold-start stations use the synthetic-history baseline and
+    station-specific profiles, falling back to the network-average factor for
+    any cell the synthetic history did not cover.
+    """
     baselines = components['baselines']
     hour_factors = components['hour_factors']
     dow_factors = components['dow_factors']
@@ -47,33 +72,47 @@ def predict_base(df, components, is_2025=True):
     station_month_adj = components['station_month_adj']
     per_station_trend = components['per_station_trend']
     global_trend = components['global_trend']
-    
+
+    cold_baselines = cold_enhanced['cold_baselines']
+    cold_hour = cold_enhanced['cold_hour_factors']
+    cold_dow = cold_enhanced['cold_dow_factors']
+    cold_month = cold_enhanced['cold_month_factors']
+    cold_trends = cold_enhanced['cold_trends']
+
     predictions = np.zeros(len(df))
-    
-    for i in range(len(df)):
-        row = df.iloc[i]
+
+    for i, row in enumerate(df.to_dict('records')):
         stn = row['station_key']
         d = str(row['direction_code'])
-        h = int(row['hour']) if 'hour' in df.columns else int(row['timestamp'].hour)
-        dow = int(row['day_of_week']) if 'day_of_week' in df.columns else int(row['timestamp'].dayofweek)
-        m = int(row['month']) if 'month' in df.columns else int(row['timestamp'].month)
-        wknd = bool(row['is_weekend']) if 'is_weekend' in df.columns else (dow >= 5)
-        yr = row.get('year', row['timestamp'].year if hasattr(row.get('timestamp', None), 'year') else 2025)
-        
-        baseline = baselines.get((stn, d), 500.0)
-        hf = hour_factors.get((h, wknd), 1.0)
-        df_val = dow_factors.get(dow, 1.0)
-        mf = month_factors.get(m, 1.0)
-        sha = station_hour_adj.get((stn, d, h, wknd), 1.0)
-        sma = station_month_adj.get((stn, d, m), 1.0)
-        
-        if isinstance(yr, (int, np.integer)) and yr >= 2025:
-            trend = per_station_trend.get(stn, global_trend)
+        ts = row.get('timestamp')
+        h = int(row['hour']) if 'hour' in row else int(ts.hour)
+        dow = int(row['day_of_week']) if 'day_of_week' in row else int(ts.dayofweek)
+        m = int(row['month']) if 'month' in row else int(ts.month)
+        wknd = bool(row['is_weekend']) if 'is_weekend' in row else (dow >= 5)
+        yr = int(row.get('year') or (ts.year if ts is not None else 2025))
+
+        if stn in train_stations:
+            baseline = baselines.get((stn, d), 500.0)
+            factors = (hour_factors.get((h, wknd), 1.0)
+                       * dow_factors.get(dow, 1.0)
+                       * month_factors.get(m, 1.0)
+                       * station_hour_adj.get((stn, d, h, wknd), 1.0)
+                       * station_month_adj.get((stn, d, m), 1.0))
+            trend = per_station_trend.get(stn, global_trend) if yr >= 2025 else 1.0
         else:
-            trend = 1.0
-        
-        predictions[i] = max(baseline * hf * df_val * mf * sha * sma * trend, 0.0)
-    
+            key = f"('{stn}', '{d}')"
+            baseline = cold_baselines.get(key, baselines.get((stn, d), 500.0))
+            factors = (
+                cold_hour.get(f"('{stn}', '{d}', {h}, {wknd})",
+                              hour_factors.get((h, wknd), 1.0))
+                * cold_dow.get(f"('{stn}', '{d}', {dow})",
+                               dow_factors.get(dow, 1.0))
+                * cold_month.get(f"('{stn}', '{d}', {m})",
+                                 month_factors.get(m, 1.0)))
+            trend = cold_trends.get(stn, global_trend) if yr >= 2025 else 1.0
+
+        predictions[i] = max(baseline * factors * trend, 0.0)
+
     return predictions
 
 
@@ -105,11 +144,14 @@ def main():
         'global_trend': global_trend,
     }
     
+    cold_enhanced = load_cold_start_enhanced()
+    train_stations = set(train['station_key'].unique())
+
     # ============================================================
     # STEP 2: Generate base predictions on validation
     # ============================================================
     print("\n--- Step 2: Base predictions on validation ---")
-    val_preds = predict_base(val, components, is_2025=True)
+    val_preds = predict_base(val, components, cold_enhanced, train_stations)
     val_residuals = val['volume'].values - val_preds
     
     val_mae = np.mean(np.abs(val_residuals))
@@ -140,12 +182,16 @@ def main():
     sub['year'] = sub['timestamp'].dt.year
     
     # Base predictions
-    base_preds = predict_base(sub, components)
+    base_preds = predict_base(sub, components, cold_enhanced, train_stations)
     print(f"  Base predictions: mean={base_preds.mean():.1f}")
     
     # Apply LightGBM correction
     sub_features = prepare_lgb_features(sub, network, base_preds)
-    final_preds = apply_lgb_correction(base_preds, sub_features, lgb_model, blend_weight=0.7)
+    # LightGBM was fitted on validation residuals, which contain warm stations
+    # only, so its correction is trusted less on cold-start rows.
+    lgb_corrections = lgb_model.predict(sub_features)
+    blend = np.where(sub['station_key'].isin(train_stations), 0.7, 0.3)
+    final_preds = np.maximum(base_preds + blend * lgb_corrections, 0.0)
     print(f"  After LGB correction: mean={final_preds.mean():.1f}")
     
     # ============================================================
@@ -167,7 +213,7 @@ def main():
     
     # Generate intervals for submission
     lower_90, upper_90 = generate_intervals(
-        final_preds, sub, interval_params, cold_stations, cold_inflation=1.5
+        final_preds, sub, interval_params, cold_stations, cold_inflation=1.4
     )
     
     # ============================================================
@@ -175,8 +221,11 @@ def main():
     # ============================================================
     train_station_counts = train.groupby('station_key').size().to_dict()
     
+    enhanced_stations = {k.strip("()").replace("'", "").split(", ")[0]
+                         for k in cold_enhanced['cold_baselines']}
     reliability_scores = compute_reliability_scores(
-        sub, cold_stations, per_station_trend, train_station_counts, network
+        sub, cold_stations, per_station_trend, train_station_counts, network,
+        enhanced_stations=enhanced_stations
     )
     
     # ============================================================

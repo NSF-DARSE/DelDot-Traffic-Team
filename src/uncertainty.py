@@ -214,8 +214,9 @@ def generate_intervals(predictions, submission_df, interval_params, cold_station
 # ============================================================
 # RELIABILITY SCORES
 # ============================================================
-def compute_reliability_scores(submission_df, cold_stations, per_station_trend, 
-                               train_station_counts, network):
+def compute_reliability_scores(submission_df, cold_stations, per_station_trend,
+                               train_station_counts, network,
+                               enhanced_stations=frozenset()):
     """
     Assign reliability scores (0–1) based on prediction difficulty.
     
@@ -253,9 +254,11 @@ def compute_reliability_scores(submission_df, cold_stations, per_station_trend,
         
         score = 0.80  # Base reliability
         
-        # Cold-start penalty
+        # Cold-start penalty. Stations with a reconstructed station-specific
+        # profile are penalised less than those falling back to network
+        # averages, because more is known about them.
         if stn in cold_stations:
-            score -= 0.30
+            score -= 0.22 if stn in enhanced_stations else 0.30
         
         # Limited training data penalty
         elif stn in train_station_counts:
