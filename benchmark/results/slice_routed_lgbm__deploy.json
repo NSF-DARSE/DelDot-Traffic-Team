@@ -1,0 +1,45 @@
+{
+ "model": "slice_routed_lgbm",
+ "arm": "deploy",
+ "seed": 0,
+ "created": "2026-08-18 13:54",
+ "code_sha": "bf8496c",
+ "splits_sha": "fd88b0f93a9d",
+ "source": "benchmark/models/slice_routed_lgbm.py",
+ "folds": [
+  {
+   "deploy": {
+    "WAPE_%": 10.55,
+    "GEH<5_%": 83.77,
+    "GEH<10_%": 95.37,
+    "within20_%": 73.55,
+    "MAE": 90.67,
+    "RMSE": 190.77,
+    "sMAPE": 18.14,
+    "R2": 0.9645,
+    "cov90": 0.8977,
+    "width": 428.4,
+    "winkler": 639.7,
+    "n": 188880,
+    "fit_predict_s": 35.3
+   }
+  }
+ ],
+ "summary": {
+  "deploy": {
+   "WAPE_%": 10.55,
+   "GEH<5_%": 83.77,
+   "GEH<10_%": 95.37,
+   "within20_%": 73.55,
+   "MAE": 90.67,
+   "RMSE": 190.77,
+   "sMAPE": 18.14,
+   "R2": 0.9645,
+   "cov90": 0.8977,
+   "width": 428.4,
+   "winkler": 639.7,
+   "n": 188880,
+   "fit_predict_s": 35.3
+  }
+ }
+}

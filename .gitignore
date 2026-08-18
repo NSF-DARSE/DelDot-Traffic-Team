@@ -213,3 +213,7 @@ __marimo__/
 # macOS
 .DS_Store
 **/.DS_Store
+
+# benchmark: generated submissions are ~19 MB each, regenerate rather than commit
+benchmark/submission_*.csv
+benchmark/**/__pycache__/
