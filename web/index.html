@@ -91,6 +91,8 @@
       <button onclick="ask('What is the best day for a road closure on STN_0067 next week?')">Best closure day next week</button>
       <button onclick="ask('Best 72 hour window for roadworks on STN_0053 next week')">Best 72-hour works window</button>
       <button onclick="ask('What is the forecast for STN_0001 tomorrow at 8am?')">Forecast for a new station</button>
+      <button onclick="ask('What happens to the network if I close two of three lanes at STN_0053 for 72 hours starting August 30 2026?')">Closure impact: 2 of 3 lanes</button>
+      <button onclick="ask('What is the impact of fully closing STN_0066 for a day on August 30 2026?')">Closure impact: full closure</button>
     </div>
 
     <div id="log">
@@ -167,6 +169,33 @@ function renderAnswer(d){
     });
     t += `<tr><td>${a.busiest_hour_of_day.time} (peak)</td><td class="num">${a.busiest_hour_of_day.forecast_volume}</td></tr></table>`;
     b.appendChild(el('div',null,t));
+  } else if (a && a.question === 'closure_impact'){
+    const c = a.closed_station, tot = a.totals;
+    let s = `<table><tr><th>Closed station</th><th class="num">Value</th></tr>`
+      + `<tr><td>${c.station} dir ${c.direction}</td><td class="num">${c.lanes_closed} of ${c.lanes_total} lanes</td></tr>`
+      + `<tr><td>Capacity during closure</td><td class="num">${c.capacity_during_closure.toLocaleString()} veh/hr</td></tr>`
+      + `<tr><td>Turned away</td><td class="num">${Math.round(tot.turned_away).toLocaleString()}</td></tr>`
+      + `<tr><td>Diverted / suppressed</td><td class="num">${Math.round(tot.diverted).toLocaleString()} / ${Math.round(tot.suppressed).toLocaleString()}</td></tr>`
+      + `<tr><td>Hours over capacity</td><td class="num">${tot.hours_over_capacity}</td></tr></table>`;
+    s += `<table style="margin-top:12px"><tr><th>Neighbour</th><th class="num">Before</th><th class="num">After</th><th>Status</th></tr>`;
+    a.neighbour_impacts.forEach(n=>{
+      const best = a.binding_constraint && n.station===a.binding_constraint.station;
+      const pct = v => (v*100).toFixed(0)+'%';
+      s += `<tr class="${best?'best':''}"><td>${n.station}${n.capacity_basis==='floored_to_forecast'?' *':''}</td>`
+        +  `<td class="num">${pct(n.utilisation_before)}</td><td class="num">${pct(n.utilisation_after)}</td>`
+        +  `<td>${n.status.replace(/_/g,' ')}</td></tr>`;
+    });
+    s += '</table>';
+    if(a.sensitivity){
+      s += '<div class="meta">Sensitivity to the diversion assumption: '
+        + a.sensitivity.map(x=>`${(x.diversion_rate*100).toFixed(0)}% &rarr; max ${(x.max_neighbour_utilisation*100).toFixed(0)}%`).join(' &middot; ')
+        + '</div>';
+    }
+    const fl = a.capacity_caveats && a.capacity_caveats.stations_floored_to_forecast;
+    if(fl && fl.length){
+      s += `<div class="meta">* capacity estimate floored to forecast for ${fl.join(', ')} &mdash; utilisation is a lower bound</div>`;
+    }
+    b.appendChild(el('div',null,s));
   } else if (a && a.question === 'lowest_impact_window'){
     let t = '<table><tr><th>Window start</th><th>Day</th><th class="num">Vehicles affected</th></tr>';
     a.ranked.forEach((c,i)=>{
