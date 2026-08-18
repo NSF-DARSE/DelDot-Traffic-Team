@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DelDOT Traffic Assistant</title>
+<style>
+  :root {
+    --ink:#12232e; --muted:#5b6b78; --line:#dfe6ec; --bg:#f5f7f9;
+    --accent:#0b6e99; --accent-soft:#e8f2f7; --warn:#8a5a00; --warn-bg:#fff6e5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       color:var(--ink);background:var(--bg)}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 22px;
+         display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:650}
+  header .sub{color:var(--muted);font-size:13px}
+  header a{color:var(--accent);font-size:13px;margin-left:auto;text-decoration:none}
+  header a:hover{text-decoration:underline}
+
+  .wrap{max-width:900px;margin:0 auto;padding:22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px}
+
+  .keybar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .keybar input{flex:1;min-width:240px;padding:9px 11px;border:1px solid var(--line);
+                border-radius:6px;font:inherit}
+  .note{background:var(--warn-bg);border:1px solid #f0dcae;color:var(--warn);
+        border-radius:6px;padding:10px 12px;font-size:13px;margin-top:10px}
+
+  .quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .quick button{background:#fff;border:1px solid var(--line);border-radius:20px;
+                padding:7px 13px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+  .quick button:hover{border-color:var(--accent);color:var(--accent)}
+
+  #log{min-height:150px}
+  .msg{margin-bottom:16px}
+  .msg .who{font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+            color:var(--muted);margin-bottom:5px}
+  .msg.me .bubble{background:var(--accent-soft);border-left:3px solid var(--accent);
+                  padding:10px 13px;border-radius:0 6px 6px 0}
+  .msg.bot .bubble{padding:2px 0}
+  .meta{font-size:12px;color:var(--muted);margin-top:8px}
+  details{margin-top:9px;font-size:13px}
+  details summary{cursor:pointer;color:var(--accent)}
+  table{border-collapse:collapse;margin-top:8px;font-size:13px;width:100%}
+  th,td{text-align:left;padding:5px 9px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr.best td{font-weight:650;color:var(--accent)}
+  pre{background:#f7f9fa;border:1px solid var(--line);border-radius:6px;
+      padding:10px;overflow:auto;font-size:12px;max-height:260px}
+
+  .ask{display:flex;gap:8px}
+  .ask input{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:6px;font:inherit}
+  .ask button{background:var(--accent);color:#fff;border:0;border-radius:6px;
+              padding:11px 20px;font:inherit;font-weight:600;cursor:pointer}
+  .ask button:disabled{opacity:.55;cursor:default}
+  .err{color:#a3282d}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:8px 0 26px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DelDOT Traffic Assistant</h1>
+  <span class="sub">Forecast questions answered from the deployed model</span>
+  <a id="dashLink" href="#" target="_blank" rel="noopener">Open QuickSight dashboard &rarr;</a>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="keybar">
+      <label for="apikey" style="font-size:13px;color:var(--muted)">API key</label>
+      <input id="apikey" type="password" placeholder="paste the x-api-key value" autocomplete="off">
+      <button onclick="saveKey()" style="padding:9px 14px;border:1px solid var(--line);
+              border-radius:6px;background:#fff;font:inherit;cursor:pointer">Save</button>
+      <span id="keystate" style="font-size:13px;color:var(--muted)"></span>
+    </div>
+    <div class="note">
+      The key is held in this browser tab only (<code>sessionStorage</code>) and is never
+      written into this file. Anything embedded in a static page is readable by any visitor,
+      so for production this should sit behind Cognito or an authenticated proxy instead.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="quick">
+      <button onclick="ask('What is the best time to travel on STN_0067 tomorrow?')">Best time to travel tomorrow</button>
+      <button onclick="ask('What is the best day for a road closure on STN_0067 next week?')">Best closure day next week</button>
+      <button onclick="ask('Best 72 hour window for roadworks on STN_0053 next week')">Best 72-hour works window</button>
+      <button onclick="ask('What is the forecast for STN_0001 tomorrow at 8am?')">Forecast for a new station</button>
+    </div>
+
+    <div id="log">
+      <div class="msg bot"><div class="who">Assistant</div><div class="bubble">
+        Ask about travel timing, closure windows, or a specific forecast. Name a station such as
+        <strong>STN_0067</strong> and a date or range. Every figure comes from the deployed
+        forecasting model &mdash; the ranking is computed deterministically, and the wording is
+        generated from those numbers.
+      </div></div>
+    </div>
+
+    <div class="ask">
+      <input id="q" placeholder="e.g. best day for a closure on STN_0053 next week"
+             onkeydown="if(event.key==='Enter')ask()">
+      <button id="send" onclick="ask()">Ask</button>
+    </div>
+  </div>
+
+  <footer>
+    Analytical estimates for planning comparison. Not engineering-grade operational,
+    safety, or capacity recommendations.
+  </footer>
+</div>
+
+<script>
+const API = "https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod";
+const DASH = "https://us-east-1.quicksight.aws.amazon.com/sn/dashboards/deldot-traffic-dashboard-v3";
+document.getElementById('dashLink').href = DASH;
+
+function saveKey(){
+  const v = document.getElementById('apikey').value.trim();
+  if(!v){ return; }
+  sessionStorage.setItem('deldot_key', v);
+  document.getElementById('apikey').value='';
+  showKeyState();
+}
+function showKeyState(){
+  const has = !!sessionStorage.getItem('deldot_key');
+  document.getElementById('keystate').textContent = has ? 'saved for this tab' : 'not set';
+}
+showKeyState();
+
+function el(tag, cls, html){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(html!==undefined) e.innerHTML=html;
+  return e;
+}
+function esc(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function push(node){
+  const log=document.getElementById('log');
+  log.appendChild(node);
+  node.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function renderAnswer(d){
+  const wrap = el('div','msg bot');
+  wrap.appendChild(el('div','who','Assistant'));
+  const b = el('div','bubble');
+
+  if(d.narrative){
+    b.appendChild(el('p',null,esc(d.narrative)));
+  } else if (d.error){
+    b.appendChild(el('p','err', esc(d.error) + (d.hint? ' &mdash; '+esc(d.hint):'')));
+  } else {
+    b.appendChild(el('p','err','No narrative was produced. The computed result is below.'));
+  }
+
+  const a = d.answer;
+  if(a && a.question === 'quietest_hours'){
+    let t = '<table><tr><th>Time</th><th class="num">Forecast veh/hr</th></tr>';
+    a.quietest_hours.forEach((h,i)=>{
+      t += `<tr class="${i===0?'best':''}"><td>${h.time}</td><td class="num">${h.forecast_volume}</td></tr>`;
+    });
+    t += `<tr><td>${a.busiest_hour_of_day.time} (peak)</td><td class="num">${a.busiest_hour_of_day.forecast_volume}</td></tr></table>`;
+    b.appendChild(el('div',null,t));
+  } else if (a && a.question === 'lowest_impact_window'){
+    let t = '<table><tr><th>Window start</th><th>Day</th><th class="num">Vehicles affected</th></tr>';
+    a.ranked.forEach((c,i)=>{
+      t += `<tr class="${i===0?'best':''}"><td>${c.start.replace('T',' ').slice(0,16)}</td>`
+        +  `<td>${c.start_day}</td><td class="num">${c.affected_vehicles.toLocaleString()}</td></tr>`;
+    });
+    t += '</table>';
+    b.appendChild(el('div',null,t));
+  }
+
+  const m = d.narrative_meta || {};
+  if(m.model_id || d.interpreted_as){
+    const bits = [];
+    if(m.model_id) bits.push('model '+esc(m.model_id.split('anthropic.').pop()));
+    if(m.guardrail) bits.push('guardrail '+esc(m.guardrail));
+    if(d.model_version) bits.push('forecast model v'+esc(d.model_version));
+    b.appendChild(el('div','meta', bits.join(' &middot; ')));
+  }
+  if(d.interpreted_as || d.answer){
+    const det = el('details');
+    det.appendChild(el('summary',null,'Show computation'));
+    det.appendChild(el('pre',null,esc(JSON.stringify(
+      {interpreted_as:d.interpreted_as, answer:d.answer}, null, 2))));
+    b.appendChild(det);
+  }
+  wrap.appendChild(b);
+  push(wrap);
+}
+
+async function ask(preset){
+  const input = document.getElementById('q');
+  const q = (preset !== undefined ? preset : input.value).trim();
+  if(!q) return;
+  const key = sessionStorage.getItem('deldot_key');
+  if(!key){
+    const w = el('div','msg bot');
+    w.appendChild(el('div','who','Assistant'));
+    w.appendChild(el('div','bubble','<p class="err">Enter the API key above first.</p>'));
+    push(w); return;
+  }
+
+  const me = el('div','msg me');
+  me.appendChild(el('div','who','You'));
+  me.appendChild(el('div','bubble', esc(q)));
+  push(me);
+  if(preset===undefined) input.value='';
+
+  const btn=document.getElementById('send');
+  btn.disabled=true; btn.textContent='Working…';
+  const pending = el('div','msg bot');
+  pending.appendChild(el('div','who','Assistant'));
+  pending.appendChild(el('div','bubble','<span style="color:#5b6b78">Computing…</span>'));
+  push(pending);
+
+  try{
+    const r = await fetch(`${API}/ask?q=${encodeURIComponent(q)}`, {headers:{'x-api-key':key}});
+    const d = await r.json();
+    pending.remove();
+    if(r.status===403){
+      const w=el('div','msg bot'); w.appendChild(el('div','who','Assistant'));
+      w.appendChild(el('div','bubble','<p class="err">403 &mdash; the API key was rejected.</p>'));
+      push(w);
+    } else {
+      renderAnswer(d);
+    }
+  }catch(e){
+    pending.remove();
+    const w=el('div','msg bot'); w.appendChild(el('div','who','Assistant'));
+    w.appendChild(el('div','bubble','<p class="err">Request failed: '+esc(e.message)+'</p>'));
+    push(w);
+  }finally{
+    btn.disabled=false; btn.textContent='Ask';
+  }
+}
+</script>
+</body>
+</html>
