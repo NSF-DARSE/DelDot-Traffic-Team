@@ -83,6 +83,8 @@ Requests without a valid key receive `HTTP 403`.
 
 - `GET /best-hours?station=STN_0067&date=2026-08-19` — quietest hours (deterministic)
 - `GET /best-window?station=STN_0067&start=...&end=...` — lowest-impact work window (deterministic)
+- `GET /simulate-closure?station=...&start=...&duration_hours=...&lanes_closed=...` —
+  closure impact on the station and its neighbours (see `closure_simulator.md`)
 - `GET /ask?q=...` — natural-language planning questions (see `traffic_assistant.md`)
 
 **Rate limits:** 25 req/s, burst 50, 50,000 requests/month quota.

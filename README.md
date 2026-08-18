@@ -160,6 +160,7 @@ API endpoints, all requiring an `x-api-key` header:
 | `/explain` | Factor-by-factor decomposition; `&narrate=true` adds prose |
 | `/best-hours` | Quietest hours on a date (deterministic) |
 | `/best-window` | Lowest-impact window for planned work (deterministic) |
+| `/simulate-closure` | Closure impact on the station and its neighbours (deterministic) |
 | `/ask` | Natural-language planning questions |
 
 Redeploy with `bash scripts/deploy.sh 2.2`.
@@ -187,6 +188,7 @@ including two security issues found and fixed during review, is in
 | [`docs/scenario_analysis.md`](docs/scenario_analysis.md) | Five scenarios, methodology and limits |
 | [`docs/security_privacy_explainability.md`](docs/security_privacy_explainability.md) | Privacy, security controls, explainability |
 | [`docs/traffic_assistant.md`](docs/traffic_assistant.md) | Conversational planning layer |
+| [`docs/closure_simulator.md`](docs/closure_simulator.md) | Closure impact model, capacity calibration, assumptions |
 | [`docs/bedrock_narrative_layer.md`](docs/bedrock_narrative_layer.md) | Narration, guardrail, Bedrock model access |
 | [`docs/aws_architecture.md`](docs/aws_architecture.md) | Deployed resources and costs |
 | [`docs/edge_cases_and_solutions.md`](docs/edge_cases_and_solutions.md) | Twelve edge cases and their handling |

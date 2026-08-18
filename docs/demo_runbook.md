@@ -26,10 +26,16 @@ The page has four quick-action buttons, so nothing needs typing.
 3. **Expand "Show computation"** — this is the point worth making out loud: the
    ranking is computed deterministically and the numbers are auditable. The model
    only phrased the result.
-4. **"Forecast for a new station"** (STN_0001) — a station with *no* observed
+4. **"Closure impact: 2 of 3 lanes"** — the strongest technical moment. Closing
+   two of three lanes at STN_0053 turns away 36,880 vehicles over 72 hours and
+   runs over capacity for 38 of them. The table names **STN_0066** as the binding
+   constraint, rising 76% to 86% of capacity, while the other four neighbours
+   stay under 56%. The sensitivity line underneath shows how much that depends on
+   the diversion assumption (50% -> 83%, 90% -> 89%).
+5. **"Forecast for a new station"** (STN_0001) — a station with *no* observed
    history. The answer says so unprompted and carries a wider interval and a
    lower reliability score. Good honesty story.
-5. Switch to the QuickSight dashboard for the 30-day view.
+6. Switch to the QuickSight dashboard for the 30-day view.
 
 ## Lines worth having ready
 
@@ -43,6 +49,9 @@ The page has four quick-action buttons, so nothing needs typing.
   neighbouring stations via the network graph, and they are labelled
   `cold_start_enhanced` with lower reliability rather than presented as equally
   certain.
+- **Capacity is calibrated from the data**, not textbook numbers: observed
+  per-lane throughput varies about threefold by road class (freeway ~1,400,
+  signalised arterial ~480). That also proved `through_lanes` is per direction.
 - **Cost:** roughly $25/month for the stack, and under a cent per question.
 
 ## If something misbehaves
@@ -63,6 +72,7 @@ API=https://94d3hvwu93.execute-api.us-east-1.amazonaws.com/prod
 # Deterministic, no language model involved — cannot fail on Bedrock
 curl -H "x-api-key: $KEY" "$API/best-window?station=STN_0067&start=2026-08-24&end=2026-08-30"
 curl -H "x-api-key: $KEY" "$API/best-hours?station=STN_0067&date=2026-08-20"
+curl -H "x-api-key: $KEY" "$API/simulate-closure?station=STN_0053&start=2026-08-30&duration_hours=72&lanes_closed=2"
 ```
 
 The deterministic endpoints are the safest thing to demo if Bedrock is unhealthy:
