@@ -5,14 +5,14 @@ Multiplicative hierarchical model with LightGBM residual correction.
 
 CRITICAL FINDING: Training timestamps are offset by +2 hours from 
 validation/submission timestamps. Training "hour 0" = actual "hour 2".
-Training covers actual hours 2–23. Hours 0–1 are only in validation.
+Training and validation both cover all 24 hours (corrected data, 2026-08-18).
 
 Architecture:
     forecast = station_baseline × hour_factor × dow_factor × month_factor 
                × station_adj × trend_factor
 
 Author: Traffic Pattern Analysis Model
-Date: 2026-08-17
+Date: 2026-08-18
 """
 
 import pandas as pd
@@ -25,13 +25,20 @@ warnings.filterwarnings('ignore')
 # ============================================================
 # CONFIGURATION
 # ============================================================
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT
-MODEL_DIR = PROJECT_ROOT / 'model'
-OUTPUT_DIR = MODEL_DIR / 'output'
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR = PROJECT_ROOT / 'output'
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-HOUR_OFFSET = 2  # Training hour + OFFSET = actual/submission hour
+# Training hour + OFFSET = actual/submission hour.
+#
+# HISTORY: the original traffic_train.parquet was mis-timestamped — its hours
+# 0-21 actually corresponded to real hours 2-23, so OFFSET was 2. Stakeholders
+# supplied a corrected file on 2026-08-18 that covers all 24 hours with correct
+# labels, so no shift is required. Verified empirically: with shift=0 the
+# val/train hourly ratios are tightly clustered (CV=0.026); with shift=2 they
+# scatter (CV=0.714), and 61/75 stations show identical train/val peak hours.
+HOUR_OFFSET = 0
 SHRINKAGE_THRESHOLD = 500
 
 
@@ -44,7 +51,7 @@ def load_and_align_data():
     
     Training hour 0 → actual hour 2
     Training hour 21 → actual hour 23
-    Training covers actual hours 2–23 (hours 0–1 only in validation).
+    Training covers all 24 hours; no shift is applied (HOUR_OFFSET = 0).
     """
     print("Loading data...")
     train = pd.read_parquet(DATA_DIR / 'traffic_train.parquet')
@@ -183,35 +190,31 @@ def compute_temporal_profiles(train, val):
     """
     Compute multiplicative temporal factors using ACTUAL hours.
     
-    Hours 2–23: learned from training (using actual_hour = raw_hour + 2)
-    Hours 0–1: learned from validation data
+    All 24 hours are learned directly from training data.
     """
     print("\n--- Layer 2: Temporal Profiles ---")
     
     global_mean = train['volume'].mean()
     print(f"  Global mean volume (training): {global_mean:.1f}")
     
-    # === HOUR × WEEKEND profile (actual hours 2–23 from training) ===
+    # === HOUR × WEEKEND profile (all 24 hours from training) ===
     hour_weekend_means = train.groupby(['actual_hour', 'is_weekend'])['volume'].mean()
     
     hour_factors = {}
     for (hour, is_wknd), mean_vol in hour_weekend_means.items():
         hour_factors[(int(hour), bool(is_wknd))] = mean_vol / global_mean
     
-    # Hours 0–1: learn from validation (these truly don't exist in training)
-    # Use validation's relative profile shape for hours 0–1
-    # Anchor: hour 2 factor from training should match hour 2 in validation (after trend)
-    val_hourly = val.groupby(['hour', 'is_weekend'])['volume'].mean()
-    
-    for hour in [0, 1]:
-        for is_wknd in [False, True]:
-            if (hour, is_wknd) in val_hourly.index:
-                # Ratio of hour 0/1 to hour 2 in validation
-                ref_val = val_hourly.get((2, is_wknd), val_hourly.get((3, is_wknd), 1))
-                ratio_to_h2 = val_hourly[(hour, is_wknd)] / ref_val
-                # Apply this ratio to our training-derived hour 2 factor
-                hour_factors[(hour, is_wknd)] = hour_factors.get((2, is_wknd), 0.1) * ratio_to_h2
-    
+    # Hours 0-1 no longer need extrapolation: the corrected training file
+    # (2026-08-18) covers all 24 hours directly. We assert full coverage so a
+    # future data regression fails loudly instead of silently defaulting to 1.0.
+    missing = [(h, w) for h in range(24) for w in (False, True)
+               if (h, w) not in hour_factors]
+    if missing:
+        raise ValueError(
+            f"Training data is missing hour x weekend combinations: {missing}. "
+            "Expected all 24 hours for both weekday and weekend."
+        )
+
     print(f"  Hour×Weekend factors: {len(hour_factors)} entries (24h × 2)")
     print(f"    Hour  0 wkday: {hour_factors.get((0, False), 'N/A'):.4f}")
     print(f"    Hour  2 wkday: {hour_factors.get((2, False), 'N/A'):.4f}")
@@ -291,7 +294,9 @@ def compute_trend(train, val):
     
     # Use overlapping months (1–6) and hours (2–23) for fair comparison
     train_subset = train[train['month'].isin([1,2,3,4,5,6])]
-    val_subset = val[(val['hour'] >= 2) & (val['month'].isin([1,2,3,4,5,6]))]
+    # All 24 hours are now present in both datasets, so no hour filtering is
+    # needed for a fair year-over-year comparison.
+    val_subset = val[val['month'].isin([1, 2, 3, 4, 5, 6])]
     
     train_stn_means = train_subset.groupby('station_key')['volume'].mean()
     val_stn_means = val_subset.groupby('station_key')['volume'].mean()

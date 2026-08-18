@@ -13,7 +13,7 @@ Steps:
 7. Validate and save submission
 
 Author: Traffic Pattern Analysis Model
-Date: 2026-08-17
+Date: 2025-08-17
 """
 
 import sys
@@ -33,8 +33,8 @@ from uncertainty import (
     compute_prediction_intervals, generate_intervals, compute_reliability_scores
 )
 
-OUTPUT_DIR = Path(__file__).parent.parent / 'output'
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / 'output'
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def predict_base(df, components, is_2025=True):
