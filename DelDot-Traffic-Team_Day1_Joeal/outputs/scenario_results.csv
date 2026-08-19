@@ -1,0 +1,6 @@
+scenario_id,station_key,estimated_volume_change_pct,lower_bound_pct,upper_bound_pct,recovery_time_hours,reliability_score,assumptions
+SCENARIO_01,STN_0108,-65.0,-97.8,-32.2,4.3,0.52,What-if TYPE (official prompt not supplied); computed from STN_0108's forecast. Full lane closure during PM peak; demand drops sharply then recovers.
+SCENARIO_02,STN_0093,45.0,10.0,80.0,6.2,0.47,What-if TYPE (official prompt not supplied); computed from STN_0093's forecast. Major event releases a surge onto the corridor after it ends.
+SCENARIO_03,STN_0116,-40.0,-75.0,-5.0,12.8,0.43,What-if TYPE (official prompt not supplied); computed from STN_0116's forecast. Winter storm suppresses discretionary trips; slow recovery.
+SCENARIO_04,STN_0053,-25.0,-60.0,10.0,15.3,0.49,What-if TYPE (official prompt not supplied); computed from STN_0053's forecast. Construction lane-drop reduces AM throughput for the duration.
+SCENARIO_05,STN_0115,25.0,-10.0,60.0,3.7,0.46,"What-if TYPE (official prompt not supplied); computed from STN_0115's forecast. Upstream incident reroutes demand onto this station, then eases."
