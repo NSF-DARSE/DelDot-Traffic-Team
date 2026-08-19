@@ -10,8 +10,24 @@ Paste the key into the field at the top and press Save. It is held in
 `sessionStorage` for that browser tab only, so re-paste it if you reopen the tab
 or use a second machine.
 
-**Dashboard:** https://us-east-1.quicksight.aws.amazon.com/sn/dashboards/deldot-traffic-dashboard-v3
-(requires being signed in to QuickSight; the page links to it)
+**Dashboard:** generate a direct link with
+
+```bash
+AWS_PROFILE=deldot bash scripts/dashboard_url.sh
+```
+
+Two things to know:
+
+1. **The dashboard only exists in us-east-1.** A console session defaulting to
+   another region (ours defaults to `us-west-2`) shows an empty dashboard list,
+   which looks like a broken dashboard and is not. The generated link opens the
+   dashboard directly and ignores the console's region.
+2. **The link is single use.** It carries a one-time auth code: the first request
+   consumes it and later requests return 403. Do not test it in one tab and demo
+   in another -- generate one, open it once. Rerun the script for another.
+
+The console route also works if you pin the region:
+https://us-east-1.quicksight.aws.amazon.com/sn/dashboards/deldot-traffic-dashboard-v3
 
 ---
 

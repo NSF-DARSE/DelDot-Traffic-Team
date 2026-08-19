@@ -143,6 +143,22 @@ mechanically rewriting code you are about to execute.
 
 ---
 
+### QuickSight embed URLs are single use, and region-pinned
+
+Two traps in one feature. The dashboard exists only in `us-east-1`, so a console
+session defaulting elsewhere shows an empty list that reads as a broken
+dashboard. And `generate-embed-url-for-registered-user` returns a URL carrying a
+one-time auth code: the first request consumes it, every later request returns
+403.
+
+We wrote a helper that verified the URL with `curl` before printing it, which
+consumed the code and handed over a dead link. Measured: request 1 -> 200,
+requests 2 and 3 -> 403. The check had to be removed entirely -- some things
+cannot be pre-flighted without destroying them.
+
+**Lesson:** `--session-lifetime-in-minutes` governs the session *after* the first
+open, not how long the link stays clickable.
+
 ## What we would do differently
 
 1. **Declare API Gateway methods explicitly from the beginning.** The `ANY`
