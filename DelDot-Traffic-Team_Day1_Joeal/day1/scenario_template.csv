@@ -1,0 +1,6 @@
+scenario_id,station_key,estimated_volume_change_pct,lower_bound_pct,upper_bound_pct,recovery_time_hours,reliability_score,assumptions
+SCENARIO_01,,,,,,,
+SCENARIO_02,,,,,,,
+SCENARIO_03,,,,,,,
+SCENARIO_04,,,,,,,
+SCENARIO_05,,,,,,,
